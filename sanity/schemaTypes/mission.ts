@@ -1,10 +1,13 @@
 import { defineField, defineType } from "sanity";
+import { CoinField } from "@/sanity/components/CoinField";
+import { reviewFields } from "@/sanity/schemaTypes/review";
 
 export const mission = defineType({
   name: "mission",
   title: "Mission",
   type: "document",
   fields: [
+    ...reviewFields,
     defineField({ name: "title", title: "Title", type: "string", validation: (rule) => rule.required().max(120) }),
     defineField({
       name: "slug",
@@ -78,6 +81,7 @@ export const mission = defineType({
       type: "number",
       description: "Practice coins for this mission only. They are not the town wallet.",
       initialValue: 20,
+      components: { input: CoinField },
       validation: (rule) => rule.required().integer().min(0).max(10000),
     }),
     defineField({

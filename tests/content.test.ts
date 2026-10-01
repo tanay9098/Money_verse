@@ -34,6 +34,26 @@ describe("demo and remote content", () => {
     expect(empty.reason).toContain("no valid missions");
   });
 
+  it("keeps production empty when Sanity is missing or has no approved missions", async () => {
+    const missing = await resolveContent(undefined, async () => ({ missions: [], lessons: [] }), () => {}, {
+      allowDemoFallback: false,
+    });
+    expect(missing.source).toBe("unavailable");
+    expect(missing.missions).toEqual([]);
+
+    const empty = await resolveContent("example", async () => ({ missions: [{ title: "Broken" }], lessons: [] }), () => {}, {
+      allowDemoFallback: false,
+    });
+    expect(empty.source).toBe("unavailable");
+    expect(empty.missions).toEqual([]);
+    expect(empty.reason).toContain("approved");
+  });
+
+  it("rejects a mission that is still in review", () => {
+    expect(validateMission({ ...demoMissions[0], reviewStatus: "inReview" })).toBeNull();
+    expect(validateMission({ ...demoMissions[0], reviewStatus: "approved" })?.slug).toBe("needs-vs-wants");
+  });
+
   it("keeps valid Sanity missions", async () => {
     const bundle = await resolveContent("example", async () => ({
       missions: demoMissions,

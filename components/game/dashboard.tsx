@@ -113,20 +113,32 @@ export function Dashboard({ content }: { content: ContentBundle }) {
             <h2 className="text-3xl font-semibold">Missions</h2>
             <p className="text-sm font-bold text-ink-soft">Ages 8–12</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {content.missions.map((mission) => (
-              <MissionCard
-                key={mission.slug}
-                mission={mission}
-                stars={progress?.missions[mission.slug]?.bestStars ?? 0}
-                completions={progress?.missions[mission.slug]?.completions ?? 0}
-              />
-            ))}
-          </div>
+          {content.missions.length === 0 ? (
+            <div className="panel p-5">
+              <h3 className="text-2xl font-semibold">No approved missions yet</h3>
+              <p className="mt-2 text-ink-soft">
+                Studio needs a mission with review status approved, then published. Drafts and items still in review stay off the town screen.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {content.missions.map((mission) => (
+                <MissionCard
+                  key={mission.slug}
+                  mission={mission}
+                  stars={progress?.missions[mission.slug]?.bestStars ?? 0}
+                  completions={progress?.missions[mission.slug]?.completions ?? 0}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section>
           <h2 className="mb-4 text-3xl font-semibold">Ideas to keep</h2>
+          {content.lessons.length === 0 ? (
+            <p className="panel px-5 py-4 font-bold">No approved lessons are published yet.</p>
+          ) : null}
           <div className="grid gap-3">
             {content.lessons.map((lesson) => (
               <details key={lesson.slug} className="panel px-5 py-4">
@@ -180,13 +192,15 @@ export function Dashboard({ content }: { content: ContentBundle }) {
 }
 
 function SourceNote({ content }: { content: ContentBundle }) {
-  const live = content.source === "sanity";
+  const label =
+    content.source === "sanity" ? "Studio lessons" : content.source === "unavailable" ? "Lessons unavailable" : "Demo lessons";
+  const detail =
+    content.reason ??
+    (content.source === "sanity" ? "Missions and lessons are coming from Sanity." : "Built-in demo lessons are on.");
   return (
     <p className="text-sm font-bold text-ink-soft" role="status">
-      <span className="mr-2 inline-flex rounded-full bg-paper px-3 py-1 text-ink">{live ? "Studio lessons" : "Demo lessons"}</span>
-      {live
-        ? content.reason ?? "Missions and lessons are coming from Sanity."
-        : content.reason ?? "Built-in demo lessons are on."}
+      <span className="mr-2 inline-flex rounded-full bg-paper px-3 py-1 text-ink">{label}</span>
+      {detail}
     </p>
   );
 }
