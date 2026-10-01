@@ -1,10 +1,12 @@
 import { defineField, defineType } from "sanity";
+import { reviewFields } from "@/sanity/schemaTypes/review";
 
 export const lesson = defineType({
   name: "lesson",
   title: "Lesson",
   type: "document",
   fields: [
+    ...reviewFields,
     defineField({ name: "title", title: "Title", type: "string", validation: (rule) => rule.required().max(120) }),
     defineField({
       name: "slug",

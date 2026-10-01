@@ -41,7 +41,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The game loads the lessons and missions in `lib/content/demo.ts`. The server log says the content source is demo.
+The game loads the lessons and missions in `lib/content/demo.ts`. The server log says the content source is demo. That fallback is for local development. A production server with no project id, a failed request, or no approved missions shows an empty town and says the lessons are unavailable.
 
 ## Connect Sanity
 
@@ -60,7 +60,7 @@ NEXT_PUBLIC_SANITY_API_VERSION=2026-01-01
 6. Optional: create a robot token with **Editor** rights and set `SANITY_API_WRITE_TOKEN` only in `.env.local`, then run `npm run seed:sanity`. That writes the demo missions and lessons. The token is server-only and is not read by the game UI.
 7. For a private dataset, set `SANITY_API_READ_TOKEN` in `.env.local`. Do not prefix tokens with `NEXT_PUBLIC_`.
 
-Editors can change lesson text, mission descriptions, choice explanations, prices, supply costs, quiz answers, difficulty, and age ranges in Studio. The game validates fetched documents. If none of the missions are valid, it shows demo content and says so.
+Editors can change lesson text, mission descriptions, choice explanations, prices, supply costs, quiz answers, difficulty, and age ranges in Studio. Coin fields use a custom game-coin input. Each mission has a Play preview. Documents move from draft to in review to approved with Studio actions. The town queries only published documents whose `reviewStatus` is `approved`. Live Content refreshes the town after a publish when a Sanity project id is set. In local development, invalid or empty Sanity results fall back to demo content and the screen says so. In production they do not.
 
 `goalAmount` turns a choice mission into a savings goal. Leave it empty to score needs instead (`needsRequired`). The lemonade play style uses supply batches and prices. Customer counts are fixed rules, not random chance.
 
@@ -110,7 +110,10 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 - `lib/mission-engine.ts` mission rules and results
 - `lib/progress.ts` versioned save data
 - `lib/content/` demo content, validation, Sanity fallback
-- `lib/sanity/` client and GROQ
+- `lib/sanity/` client, live content, and GROQ
+- `sanity/actions/` review actions
+- `sanity/components/` coin input and mission preview
+- `WRITEUP.md` challenge notes
 - `sanity/` schema
 - `tests/` unit tests
 

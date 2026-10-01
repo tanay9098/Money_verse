@@ -1,4 +1,4 @@
-export const missionsQuery = `*[_type == "mission" && defined(slug.current)] | order(order asc) {
+export const missionsQuery = `*[_type == "mission" && reviewStatus == "approved" && defined(slug.current)] | order(order asc) {
   "slug": slug.current,
   title,
   summary,
@@ -44,7 +44,7 @@ export const missionsQuery = `*[_type == "mission" && defined(slug.current)] | o
   rewards{ xp, coins, badgeId, badgeName, badgeDescription }
 }`;
 
-export const lessonsQuery = `*[_type == "lesson" && defined(slug.current)] | order(order asc) {
+export const lessonsQuery = `*[_type == "lesson" && reviewStatus == "approved" && defined(slug.current)] | order(order asc) {
   "slug": slug.current,
   title,
   summary,

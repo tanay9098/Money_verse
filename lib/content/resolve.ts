@@ -7,19 +7,35 @@ export type RemotePayload = {
   lessons: unknown;
 };
 
+export type ResolveOptions = {
+  allowDemoFallback: boolean;
+};
+
+const demoBundle = {
+  source: "demo" as const,
+  reason: "Sanity project id is not configured. These are built-in demo lessons.",
+  missions: demoMissions,
+  lessons: demoLessons,
+};
+
 export async function resolveContent(
   projectId: string | undefined,
   fetchRemote: () => Promise<RemotePayload>,
   log: (message: string) => void = () => {},
+  options: ResolveOptions = { allowDemoFallback: true },
 ): Promise<ContentBundle> {
   if (!projectId) {
+    if (!options.allowDemoFallback) {
+      log("[MoneyVerse] Content source: unavailable. Production has no Sanity project id.");
+      return {
+        source: "unavailable",
+        reason: "This deployment has no Sanity project id, so approved lessons are not loaded.",
+        missions: [],
+        lessons: [],
+      };
+    }
     log("[MoneyVerse] Content source: demo. Sanity project id is not set.");
-    return {
-      source: "demo",
-      reason: "Sanity project id is not configured. These are built-in demo lessons.",
-      missions: demoMissions,
-      lessons: demoLessons,
-    };
+    return demoBundle;
   }
 
   try {
@@ -27,6 +43,15 @@ export async function resolveContent(
     const missions = validateMissions(remote.missions);
     const lessons = validateLessons(remote.lessons);
     if (missions.length === 0) {
+      if (!options.allowDemoFallback) {
+        log("[MoneyVerse] Content source: unavailable. Sanity returned no approved missions.");
+        return {
+          source: "unavailable",
+          reason: "No approved missions are published in Sanity yet. Approve and publish them in Studio.",
+          missions: [],
+          lessons,
+        };
+      }
       log("[MoneyVerse] Content source: demo. Sanity returned no valid missions.");
       return {
         source: "demo",
@@ -39,9 +64,11 @@ export async function resolveContent(
       log("[MoneyVerse] Content source: sanity. No valid lessons were published, so demo lessons are shown.");
       return {
         source: "sanity",
-        reason: "Missions loaded from Sanity. Demo lessons are shown until lessons are published.",
+        reason: options.allowDemoFallback
+          ? "Missions loaded from Sanity. Demo lessons are shown until lessons are published."
+          : "Missions loaded from Sanity. No approved lessons are published yet.",
         missions,
-        lessons: demoLessons,
+        lessons: options.allowDemoFallback ? demoLessons : [],
       };
     }
     log("[MoneyVerse] Content source: sanity.");
@@ -52,6 +79,15 @@ export async function resolveContent(
       lessons,
     };
   } catch {
+    if (!options.allowDemoFallback) {
+      log("[MoneyVerse] Content source: unavailable. Sanity request failed.");
+      return {
+        source: "unavailable",
+        reason: "Sanity could not be reached, so approved lessons are not loaded.",
+        missions: [],
+        lessons: [],
+      };
+    }
     log("[MoneyVerse] Content source: demo. Sanity request failed.");
     return {
       source: "demo",

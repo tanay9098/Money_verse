@@ -101,7 +101,7 @@ export type Lesson = {
   order: number;
 };
 
-export type ContentSource = "sanity" | "demo";
+export type ContentSource = "sanity" | "demo" | "unavailable";
 
 export type ContentBundle = {
   source: ContentSource;

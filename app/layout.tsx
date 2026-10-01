@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import { ProgressProvider } from "@/components/game/progress-provider";
+import { SanityLive } from "@/lib/sanity/live";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${fredoka.variable} ${nunito.variable} h-full`}>
       <body className="min-h-full font-sans text-ink antialiased">
         <ProgressProvider>{children}</ProgressProvider>
+        <SanityLive />
       </body>
     </html>
   );

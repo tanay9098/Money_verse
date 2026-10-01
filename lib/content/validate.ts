@@ -38,7 +38,12 @@ export function validateLesson(raw: unknown): Lesson | null {
     return null;
   }
   if (ageMax < ageMin) return null;
+  if (!isApprovedForPlay(raw.reviewStatus)) return null;
   return { id: slug, slug, title, summary, body, topic, ageMin, ageMax, order };
+}
+
+function isApprovedForPlay(status: unknown): boolean {
+  return status == null || status === "approved";
 }
 
 export function validateMission(raw: unknown): Mission | null {
@@ -76,7 +81,8 @@ export function validateMission(raw: unknown): Mission | null {
     startingCoins == null ||
     needsRequired == null ||
     !successHeadline ||
-    !practiceHeadline
+    !practiceHeadline ||
+    !isApprovedForPlay(raw.reviewStatus)
   ) {
     return null;
   }

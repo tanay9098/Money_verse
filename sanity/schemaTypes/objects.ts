@@ -1,4 +1,5 @@
 import { defineField, defineType } from "sanity";
+import { CoinField } from "@/sanity/components/CoinField";
 
 const slugId = (name: string, title: string) =>
   defineField({
@@ -27,6 +28,7 @@ export const choiceOption = defineType({
       name: "coinDelta",
       title: "Coin change",
       type: "number",
+      components: { input: CoinField },
       description: "Use a negative number for a spend, or 0 to keep coins. Spending is checked before any bonus.",
       initialValue: 0,
       validation: (rule) => rule.required().integer().min(-1000).max(1000),
@@ -35,6 +37,7 @@ export const choiceOption = defineType({
       name: "bonusCoins",
       title: "Bonus coins",
       type: "number",
+      components: { input: CoinField },
       description: "Extra coins added after the spend, such as 3 for the simple-interest example.",
       initialValue: 0,
       validation: (rule) => rule.required().integer().min(0).max(1000),
@@ -130,6 +133,7 @@ export const supplyOption = defineType({
       name: "cost",
       title: "Cost in game coins",
       type: "number",
+      components: { input: CoinField },
       validation: (rule) => rule.required().integer().min(0).max(10000),
     }),
     defineField({
@@ -243,6 +247,7 @@ export const reward = defineType({
       name: "coins",
       title: "Town-wallet game coins for the first finish",
       type: "number",
+      components: { input: CoinField },
       initialValue: 12,
       description: "Replays do not grant these coins again.",
       validation: (rule) => rule.required().integer().min(0).max(500),

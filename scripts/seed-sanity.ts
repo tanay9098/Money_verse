@@ -14,6 +14,8 @@ function missionDocument(mission: Mission) {
   return {
     _id: `mission-${mission.slug}`,
     _type: "mission",
+    reviewStatus: "approved",
+    reviewerNote: "Seeded as approved so the town can load it.",
     title: mission.title,
     slug: { _type: "slug", current: mission.slug },
     summary: mission.summary,
@@ -74,6 +76,8 @@ function lessonDocument(lesson: Lesson) {
   return {
     _id: `lesson-${lesson.slug}`,
     _type: "lesson",
+    reviewStatus: "approved",
+    reviewerNote: "Seeded as approved so the town can load it.",
     title: lesson.title,
     slug: { _type: "slug", current: lesson.slug },
     summary: lesson.summary,
