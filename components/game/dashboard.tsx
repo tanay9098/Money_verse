@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bike, BookOpen, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
+import { Bike, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
 import { Pip, TownScene } from "@/components/town";
 import { AccountMenu } from "@/components/game/account-menu";
 import { syncStatusCopy, useProgress } from "@/components/game/progress-provider";
 import { Action, CoinPill, ProgressBar, StarRow } from "@/components/game/ui";
+import { SAVINGS_GOAL_NAME, SAVINGS_GOAL_TARGET } from "@/lib/progress";
 import { formatCoins, formatSignedCoins } from "@/lib/format";
 import { levelForXp } from "@/lib/mission-engine";
-import { moveCoinsToSavings } from "@/lib/progress";
+import { SavingsControls } from "@/components/game/savings-controls";
+import { LessonCard } from "@/components/game/lesson-card";
 import { savingsProgress } from "@/lib/finance";
 import type { ContentBundle, Mission } from "@/lib/types";
 
@@ -29,7 +31,6 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
   const { ready, recovered, progress, signedIn, syncPhase, syncNote, save, reset, dismissHeld } = useProgress();
   const cloudNote = signedIn ? syncStatusCopy(syncPhase, syncNote) : null;
   const [confirmReset, setConfirmReset] = useState(false);
-  const [saveNote, setSaveNote] = useState<string | null>(null);
   const nextMission =
     content.missions.find((mission) => (progress?.missions[mission.slug]?.completions ?? 0) === 0) ?? content.missions[0];
 
@@ -91,27 +92,14 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
           coins={progress?.coins ?? 0}
           xp={progress?.xp ?? 0}
           savings={progress?.savings ?? 0}
-          goalName={progress?.savingsGoalName ?? "Town bicycle"}
-          goalTarget={progress?.savingsGoalTarget ?? 150}
+          goalName={progress?.savingsGoalName ?? SAVINGS_GOAL_NAME}
+          goalTarget={progress?.savingsGoalTarget ?? SAVINGS_GOAL_TARGET}
+          totalEarned={progress?.totalEarned ?? 0}
           badges={progress?.badges ?? []}
           ledger={progress?.ledger ?? []}
-          saveNote={saveNote}
           cloudNote={cloudNote}
           onDismissHeld={syncPhase === "conflict" ? dismissHeld : null}
-          onSave={(amount) => {
-            if (!progress) return;
-            const moved = moveCoinsToSavings(progress, amount);
-            if (!moved.ok) {
-              setSaveNote(
-                moved.reason === "insufficient_funds"
-                  ? "The town wallet does not have that many game coins."
-                  : "Choose a whole number of game coins to move.",
-              );
-              return;
-            }
-            save(moved.progress);
-            setSaveNote(`Moved ${formatCoins(amount)} into the bicycle jar.`);
-          }}
+          controls={progress ? <SavingsControls progress={progress} onChange={save} /> : null}
           onResetRequest={() => setConfirmReset(true)}
         />
 
@@ -144,18 +132,16 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
         <section>
           <h2 className="mb-4 text-3xl font-semibold">Ideas to keep</h2>
           {content.lessons.length === 0 ? (
-            <p className="panel px-5 py-4 font-bold">No approved lessons are published yet.</p>
+            <div className="panel px-5 py-4">
+              <p className="font-bold">No approved lessons are published yet.</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                In Studio, open a lesson, set Review status to Approved, then press Publish. See the content guide in the README.
+              </p>
+            </div>
           ) : null}
           <div className="grid gap-3">
             {content.lessons.map((lesson) => (
-              <details key={lesson.slug} className="panel px-5 py-4">
-                <summary className="cursor-pointer text-lg font-extrabold">
-                  <BookOpen className="mr-2 inline h-5 w-5" aria-hidden="true" />
-                  {lesson.title}
-                  <span className="mt-1 block text-sm font-bold text-ink-soft">{lesson.summary}</span>
-                </summary>
-                <p className="mt-3 text-base leading-relaxed">{lesson.body}</p>
-              </details>
+              <LessonCard key={lesson.slug} lesson={lesson} />
             ))}
           </div>
         </section>
@@ -188,7 +174,6 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
                 onClick={() => {
                   reset();
                   setConfirmReset(false);
-                  setSaveNote(null);
                 }}
               >
                 Reset progress
@@ -244,12 +229,12 @@ function WalletPanel({
   savings,
   goalName,
   goalTarget,
+  totalEarned,
   badges,
   ledger,
-  saveNote,
   cloudNote,
   onDismissHeld,
-  onSave,
+  controls,
   onResetRequest,
 }: {
   ready: boolean;
@@ -258,12 +243,12 @@ function WalletPanel({
   savings: number;
   goalName: string;
   goalTarget: number;
+  totalEarned: number;
   badges: { id: string; name: string; description: string }[];
   ledger: { id: string; label: string; amount: number }[];
-  saveNote: string | null;
   cloudNote: string | null;
   onDismissHeld: (() => void) | null;
-  onSave: (amount: number) => void;
+  controls: React.ReactNode;
   onResetRequest: () => void;
 }) {
   const goal = savingsProgress(savings, goalTarget);
@@ -295,26 +280,13 @@ function WalletPanel({
             <div className="mt-5">
               <ProgressBar percent={goal.percent} label={`${goalName}: ${formatCoins(savings)} saved of ${formatCoins(goalTarget)}`} />
               <p className="mt-2 text-sm font-bold text-ink-soft">
-                {goal.complete ? "The bicycle goal is reached." : `${formatCoins(goal.remaining)} still to save.`}
+                {goal.complete
+                  ? `The ${goalName} goal is reached.`
+                  : `${formatCoins(goal.remaining)} still to save.`}{" "}
+                Goal: {formatCoins(goalTarget)}. Earned so far: {formatCoins(totalEarned)}.
               </p>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {[5, 10].map((amount) => (
-                <Action key={amount} variant="secondary" disabled={coins < amount} onClick={() => onSave(amount)}>
-                  Save {amount}
-                </Action>
-              ))}
-              <Action variant="secondary" disabled={coins < 1} onClick={() => onSave(coins)}>
-                Save all
-              </Action>
-            </div>
-            {saveNote ? (
-              <p className="mt-3 font-bold" role="status">
-                {saveNote}
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-ink-soft">Moving coins lowers the town wallet and raises the bicycle jar. The wallet cannot go below zero.</p>
-            )}
+            {controls}
             <div className="mt-5">
               <ProgressBar
                 percent={level.nextName ? levelPercent : 100}

@@ -1,5 +1,6 @@
 import { createClient, type IdentifiedSanityDocumentStub } from "@sanity/client";
-import { demoLessons, demoMissions } from "../lib/content/demo";
+import { demoMissions } from "../lib/content/demo";
+import { starterLessons } from "../lib/content/lessons";
 import type { Lesson, Mission } from "../lib/types";
 
 function requireEnv(name: string): string {
@@ -83,13 +84,33 @@ function lessonDocument(lesson: Lesson) {
     summary: lesson.summary,
     body: lesson.body,
     topic: lesson.topic,
+    difficulty: lesson.difficulty,
+    objectives: lesson.objectives,
     ageMin: lesson.ageMin,
     ageMax: lesson.ageMax,
     order: lesson.order,
+    sections: lesson.sections.map((section) => ({ _key: section.id, _type: "lessonSection", ...section })),
+    quiz: lesson.quiz.map((question) => ({
+      _key: question.id,
+      _type: "quizQuestion",
+      id: question.id,
+      prompt: question.prompt,
+      choices: question.choices.map((choice) => ({ _key: choice.id, _type: "quizChoice", ...choice })),
+    })),
+    passPercent: lesson.passPercent,
+    rewards: lesson.rewards ? { _type: "lessonReward", ...lesson.rewards } : undefined,
   };
 }
 
 async function main() {
+  const documents = [...demoMissions.map(missionDocument), ...starterLessons.map(lessonDocument)];
+  // Writing to a dataset is outward-facing, so the script only previews unless told to proceed.
+  if (!process.argv.includes("--yes")) {
+    console.log(`Dry run. Would create or replace ${documents.length} published documents (approved, ready for the town):`);
+    for (const document of documents) console.log(`  ${document._id}`);
+    console.log("Run `npm run seed:sanity -- --yes` to write them. Documents with these ids are replaced, nothing else is touched.");
+    return;
+  }
   const projectId = requireEnv("NEXT_PUBLIC_SANITY_PROJECT_ID");
   const token = requireEnv("SANITY_API_WRITE_TOKEN");
   const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
@@ -101,12 +122,11 @@ async function main() {
     useCdn: false,
   });
 
-  const documents = [...demoMissions.map(missionDocument), ...demoLessons.map(lessonDocument)];
   for (const document of documents) {
     await client.createOrReplace(document as IdentifiedSanityDocumentStub);
     console.log(`Published ${document._id}`);
   }
-  console.log("Demo lessons and missions are in Sanity. Publish state is the document itself (createOrReplace writes the published document).");
+  console.log("Missions and lessons are in Sanity as published, approved documents. Reload the town to see them.");
 }
 
 main().catch((error: unknown) => {

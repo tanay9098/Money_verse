@@ -1,51 +1,7 @@
+import { starterLessons } from "@/lib/content/lessons";
 import type { Lesson, Mission } from "@/lib/types";
 
-export const demoLessons: Lesson[] = [
-  {
-    id: "needs-and-wants",
-    slug: "needs-and-wants",
-    title: "Needs and wants",
-    summary: "A need helps you stay well. A want is nice to have.",
-    body: "A need is something that helps you stay healthy, safe, or ready to learn. Food, water, a way to get where you must go, and school supplies are often needs. A want is something fun or extra, like stickers, a toy, or a fancy snack. Wants are allowed. The skill is noticing which is which before you spend. In MoneyVerse every coin is a pretend game coin.",
-    topic: "Needs vs wants",
-    ageMin: 8,
-    ageMax: 12,
-    order: 1,
-  },
-  {
-    id: "opportunity-cost",
-    slug: "opportunity-cost",
-    title: "Opportunity cost",
-    summary: "Choosing one thing means letting another go.",
-    body: "Opportunity cost is what you give up when you choose. If you spend 8 game coins on cookies, those same coins cannot also buy a bus ride. That does not make the cookies a mistake. It means every spend has a trade-off. Naming the trade-off helps you decide on purpose.",
-    topic: "Opportunity cost",
-    ageMin: 8,
-    ageMax: 12,
-    order: 2,
-  },
-  {
-    id: "saving-and-interest",
-    slug: "saving-and-interest",
-    title: "Saving goals and simple interest",
-    summary: "A goal tells savings where to go. Interest is a small extra.",
-    body: "A savings goal has a name and an amount, like a bicycle for 150 game coins. A budget is a plan for how coins will be used. Income is coins that come in, such as helper pay. If you leave game coins in the jar, this town's bank adds a small bonus. That bonus is a simple-interest example: extra coins for keeping savings put. Real banks and investments follow different rules, and investing can lose money. MoneyVerse is practice with fictional coins, not personal financial advice.",
-    topic: "Saving",
-    ageMin: 8,
-    ageMax: 12,
-    order: 3,
-  },
-  {
-    id: "profit",
-    slug: "profit",
-    title: "Revenue, expenses, and profit",
-    summary: "Profit is what is left after costs.",
-    body: "Revenue is the coins customers pay you. For a lemonade stand, revenue = cups sold × price. Expenses are the costs you pay to run the stand, such as lemons, sugar, and cups. Profit = revenue − expenses. If the number is below zero, it is a loss. A loss means the plan cost more than it brought in. Changing the price or the supply batch changes both sides of the formula. Customers in this game follow a set rule so you can compare choices.",
-    topic: "Profit",
-    ageMin: 8,
-    ageMax: 12,
-    order: 4,
-  },
-];
+export const demoLessons: Lesson[] = starterLessons;
 
 export const demoMissions: Mission[] = [
   {

@@ -158,3 +158,52 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 ## Privacy
 
 No birth dates, location, or real financial data. Google sign-in can receive the account's display name and profile image. Email is not requested. No advertising, purchases, stranger chat, or public leaderboards. Reset progress any time from the town wallet.
+
+## Content guide: publishing missions and lessons
+
+Children only see a mission or lesson when **both** are true:
+
+1. **Review status is Approved** (our own checklist field: Draft → In review → Approved).
+2. **The document is Published** in Sanity (the green Publish button). A draft that is merely saved is never shown, because the site reads with the `published` perspective.
+
+The two are separate on purpose. Approving without publishing keeps content hidden. Publishing without approving is also hidden.
+
+### Why the deployed town says "No approved missions yet"
+
+The `production` dataset in Sanity project `8ndcaq5n` has no mission or lesson documents (Studio overview: Documents 0 / 10k). Nothing in the code hides them. Add and publish content using either route below.
+
+### Route A: write content in Studio (`/studio`)
+
+1. Open `https://<your-site>/studio` and sign in with the Sanity account.
+2. **Missions** or **Lessons** → create a document and fill the required fields. Studio shows validation messages on each field.
+3. Document actions: **Send for review** → **Approve** → **Publish**.
+4. Reload the town. Lessons: sections, a quiz of 1–5 single-choice questions (exactly one answer marked correct), a pass percentage (66 = 2 of 3), and an optional one-time coin/XP reward.
+
+Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://money-verse-orpin.vercel.app`) **with credentials allowed**. Only `http://localhost:3000` is registered today, so `/studio` on Vercel cannot sign in until this is added.
+
+### Route B: load the 3 missions and 8 starter lessons
+
+```bash
+# .env.local needs NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, SANITY_API_WRITE_TOKEN
+npm run seed:sanity            # dry run: lists the 11 documents, writes nothing
+npm run seed:sanity -- --yes   # writes them as approved + published
+```
+
+The script only creates or replaces documents whose ids start with `mission-` or `lesson-` and are listed in the dry run. It never deletes anything and never touches `playerProgress`. Run it only when you want those documents in production.
+
+## Game economy rules
+
+All logic lives in `lib/economy.ts`; components call it and never compute balances themselves.
+
+- Coins are whole numbers from 1 to 1,000,000 per action. Decimals, negatives, `NaN`, and text like `1e3` are rejected.
+- The wallet and the jar never go below 0. A failed action returns the original state, so nothing is half-applied.
+- Wallet, jar, and total earned always agree: `wallet + savings + spent = total earned`.
+- **Goal target ≠ wallet ≠ savings.** The target (default 150, editable up to 1,000,000 in the app) only measures progress. How much can be saved at once is limited by the wallet, nothing else. Example: 100 in the wallet and 20 saved toward 150 → save 100 → 120 of 150, 30 left.
+- Save 5 / Save 10 / Save all / any typed amount move wallet → jar. **Take back** moves jar → wallet.
+- Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (missions) or nothing (lessons). Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
+
+## Persistence and sign-in
+
+- **Guests:** progress is saved in this browser's `localStorage`. Clearing site data erases it.
+- **Signed in:** Google sign-in stores the same progress in a private `playerProgress` document (server token only). On a conflict the cloud wallet wins; mission and lesson completion are merged (the higher result is kept), and each write carries a `mutationId` so retries are not applied twice. Signing in does not move a guest game onto the account.
+- **Why the header says "Google sign-in is not set up":** `isGoogleAuthConfigured()` needs all of `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET` on the server. Set them in Vercel (Production), add `https://<your-site>/api/auth/callback/google` as an authorized redirect URI in Google Cloud, and set `AUTH_URL`. Without `AUTH_SECRET` the browser console shows an Auth.js `MissingSecret` message; the game still works as a guest.

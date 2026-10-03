@@ -95,5 +95,6 @@ export function acceptProgress(raw: unknown): PlayerProgress | null {
   }
   if (!Array.isArray(raw.badges) || !Array.isArray(raw.ledger) || !isRecord(raw.missions)) return null;
   if (raw.badges.length > 24 || raw.ledger.length > 200 || Object.keys(raw.missions).length > 40) return null;
+  if (raw.lessons !== undefined && (!isRecord(raw.lessons) || Object.keys(raw.lessons).length > 60)) return null;
   return parseProgress(raw).progress;
 }

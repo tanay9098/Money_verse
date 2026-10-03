@@ -89,16 +89,42 @@ export type Mission = {
   rewards: Rewards;
 };
 
+export const LESSON_ILLUSTRATIONS = ["coin", "jar", "cart", "calendar", "lemonade", "balance", "umbrella", "lightbulb"] as const;
+export type LessonIllustration = (typeof LESSON_ILLUSTRATIONS)[number];
+
+export type LessonSection = {
+  id: string;
+  heading: string;
+  body: string;
+  illustration: LessonIllustration | null;
+};
+
+export type LessonRewards = {
+  coins: number;
+  xp: number;
+};
+
 export type Lesson = {
   id: string;
   slug: string;
   title: string;
   summary: string;
+  /** Short introduction shown before the sections. */
   body: string;
   topic: string;
+  difficulty: Difficulty;
+  /** What a child should be able to do after the lesson. */
+  objectives: string[];
   ageMin: number;
   ageMax: number;
   order: number;
+  sections: LessonSection[];
+  /** Single-choice questions. Empty means the lesson is read-only. */
+  quiz: QuizQuestion[];
+  /** Percent of questions to answer correctly to complete the lesson. */
+  passPercent: number;
+  /** One-time fictional reward. Always null for lessons without a quiz. */
+  rewards: LessonRewards | null;
 };
 
 export type ContentSource = "sanity" | "demo" | "unavailable";
@@ -160,7 +186,13 @@ export type MissionOutcome = {
   stats: Stat[];
 };
 
-export type LedgerKind = "welcome" | "mission-reward" | "savings-transfer";
+export type LedgerKind =
+  | "welcome"
+  | "mission-reward"
+  | "lesson-reward"
+  | "savings-transfer"
+  | "savings-withdraw"
+  | "spend";
 
 export type LedgerEntry = {
   id: string;
@@ -176,6 +208,15 @@ export type MissionRecord = {
   bestStars: Stars;
   lastQuizCorrect: number;
   lastPlayedAt: string;
+};
+
+export type LessonRecord = {
+  completed: boolean;
+  attempts: number;
+  bestCorrect: number;
+  total: number;
+  lastPlayedAt: string;
+  completedAt: string | null;
 };
 
 export type Badge = {
@@ -194,5 +235,10 @@ export type PlayerProgress = {
   savingsGoalTarget: number;
   badges: Badge[];
   missions: Record<string, MissionRecord>;
+  /** Added after version 1 shipped. Older saves are read with an empty record. */
+  lessons: Record<string, LessonRecord>;
+  /** Every coin ever earned, including the starter pack. coins + savings + totalSpent always equals this. */
+  totalEarned: number;
+  totalSpent: number;
   ledger: LedgerEntry[];
 };

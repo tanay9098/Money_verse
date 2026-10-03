@@ -50,7 +50,17 @@ export const lessonsQuery = `*[_type == "lesson" && reviewStatus == "approved" &
   summary,
   body,
   topic,
+  difficulty,
+  objectives,
   ageMin,
   ageMax,
-  order
+  order,
+  sections[]{ id, heading, body, illustration },
+  quiz[]{
+    id,
+    prompt,
+    choices[]{ id, label, correct, explanation }
+  },
+  passPercent,
+  rewards{ coins, xp }
 }`;
