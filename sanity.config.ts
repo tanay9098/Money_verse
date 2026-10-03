@@ -20,7 +20,11 @@ export default defineConfig({
     }),
   ],
   document: {
+    newDocumentOptions: (previous) => previous.filter((template) => template.templateId !== "playerProgress"),
     actions: (previous, context) => {
+      if (context.schemaType === "playerProgress") {
+        return previous.filter((action) => action.action !== "publish" && action.action !== "unpublish" && action.action !== "duplicate");
+      }
       if (context.schemaType !== "mission" && context.schemaType !== "lesson") return previous;
       return [SendForReviewAction, ApproveAction, ...previous];
     },

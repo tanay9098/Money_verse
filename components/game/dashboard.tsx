@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bike, BookOpen, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
 import { Pip, TownScene } from "@/components/town";
-import { useProgress } from "@/components/game/progress-provider";
+import { AccountMenu } from "@/components/game/account-menu";
+import { syncStatusCopy, useProgress } from "@/components/game/progress-provider";
 import { Action, CoinPill, ProgressBar, StarRow } from "@/components/game/ui";
 import { formatCoins, formatSignedCoins } from "@/lib/format";
 import { levelForXp } from "@/lib/mission-engine";
@@ -24,8 +25,9 @@ const missionTint: Record<string, string> = {
   "lemonade-stand": "bg-[#fff1b8]",
 };
 
-export function Dashboard({ content }: { content: ContentBundle }) {
-  const { ready, recovered, progress, save, reset } = useProgress();
+export function Dashboard({ content, authConfigured }: { content: ContentBundle; authConfigured: boolean }) {
+  const { ready, recovered, progress, signedIn, syncPhase, syncNote, save, reset, dismissHeld } = useProgress();
+  const cloudNote = signedIn ? syncStatusCopy(syncPhase, syncNote) : null;
   const [confirmReset, setConfirmReset] = useState(false);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const nextMission =
@@ -43,7 +45,10 @@ export function Dashboard({ content }: { content: ContentBundle }) {
         <Link href="/" className="display text-2xl font-semibold text-ink">
           MoneyVerse
         </Link>
-        {ready && progress ? <CoinPill amount={progress.coins} /> : <span className="h-9 w-40 rounded-full bg-line" />}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <AccountMenu configured={authConfigured} />
+          {ready && progress ? <CoinPill amount={progress.coins} /> : <span className="h-9 w-40 rounded-full bg-line" />}
+        </div>
       </header>
       <main id="main" className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16">
         <section className="panel overflow-hidden">
@@ -52,7 +57,7 @@ export function Dashboard({ content }: { content: ContentBundle }) {
               <p className="text-sm font-extrabold uppercase tracking-wide text-leaf">Fictional game coins only</p>
               <h1 className="mt-2 text-4xl font-semibold leading-tight sm:text-5xl">Help Pip learn how money choices work.</h1>
               <p className="mt-3 max-w-xl text-lg text-ink-soft">
-                Practice income, spending, needs and wants, saving, and profit in a pretend town. No account. No real money.
+                Practice income, spending, needs and wants, saving, and profit in a pretend town. No real money.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 {nextMission ? (
@@ -91,6 +96,8 @@ export function Dashboard({ content }: { content: ContentBundle }) {
           badges={progress?.badges ?? []}
           ledger={progress?.ledger ?? []}
           saveNote={saveNote}
+          cloudNote={cloudNote}
+          onDismissHeld={syncPhase === "conflict" ? dismissHeld : null}
           onSave={(amount) => {
             if (!progress) return;
             const moved = moveCoinsToSavings(progress, amount);
@@ -156,8 +163,9 @@ export function Dashboard({ content }: { content: ContentBundle }) {
         <section className="panel px-5 py-5 text-sm leading-relaxed text-ink-soft">
           <h2 className="display text-xl font-semibold text-ink">For grownups nearby</h2>
           <p className="mt-2">
-            MoneyVerse is a private practice game. It does not collect names, emails, or real financial information, and it does not
-            offer personal financial advice. Progress stays in this browser. Currency is always labeled as fictional game coins.
+            MoneyVerse is a practice game. It does not offer personal financial advice, and every coin is a fictional game coin. Without
+            signing in, progress stays in this browser. Google sign-in is optional and is used only to store that same progress in a
+            private cloud save. Signing in does not move a signed-out game onto the account.
           </p>
         </section>
       </main>
@@ -168,7 +176,9 @@ export function Dashboard({ content }: { content: ContentBundle }) {
               Reset progress?
             </h2>
             <p className="mt-2 text-ink-soft">
-              This clears badges, fictional game coins, and mission stars saved on this device. Nothing is sent to a server.
+              {signedIn
+                ? "This clears badges, fictional game coins, and mission stars on this device. When you are online, the same reset is sent to your cloud save."
+                : "This clears badges, fictional game coins, and mission stars saved on this device. A signed-in cloud save is left as it is."}
             </p>
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Action variant="secondary" onClick={() => setConfirmReset(false)}>
@@ -181,7 +191,7 @@ export function Dashboard({ content }: { content: ContentBundle }) {
                   setSaveNote(null);
                 }}
               >
-                Reset this device
+                Reset progress
               </Action>
             </div>
           </div>
@@ -237,6 +247,8 @@ function WalletPanel({
   badges,
   ledger,
   saveNote,
+  cloudNote,
+  onDismissHeld,
   onSave,
   onResetRequest,
 }: {
@@ -249,6 +261,8 @@ function WalletPanel({
   badges: { id: string; name: string; description: string }[];
   ledger: { id: string; label: string; amount: number }[];
   saveNote: string | null;
+  cloudNote: string | null;
+  onDismissHeld: (() => void) | null;
   onSave: (amount: number) => void;
   onResetRequest: () => void;
 }) {
@@ -268,6 +282,16 @@ function WalletPanel({
           <>
             <p className="mt-3 text-4xl font-extrabold">{formatCoins(coins)}</p>
             <p className="text-sm font-bold text-ink-soft">Fictional game coins. They cannot be exchanged for real money.</p>
+            {cloudNote ? (
+              <p className="mt-2 text-sm font-bold" role="status">
+                {cloudNote}{" "}
+                {onDismissHeld ? (
+                  <button type="button" className="underline" onClick={onDismissHeld}>
+                    Dismiss the aside copy
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
             <div className="mt-5">
               <ProgressBar percent={goal.percent} label={`${goalName}: ${formatCoins(savings)} saved of ${formatCoins(goalTarget)}`} />
               <p className="mt-2 text-sm font-bold text-ink-soft">
