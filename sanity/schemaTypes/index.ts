@@ -3,6 +3,8 @@ import { mission } from "@/sanity/schemaTypes/mission";
 import { playerProgress } from "@/sanity/schemaTypes/playerProgress";
 import {
   choiceOption,
+  lessonReward,
+  lessonSection,
   missionStep,
   priceOption,
   quizChoice,
@@ -22,4 +24,6 @@ export const schemaTypes = [
   quizQuestion,
   quizChoice,
   reward,
+  lessonSection,
+  lessonReward,
 ];

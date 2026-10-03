@@ -1,6 +1,5 @@
 import { acceptProgress, type LocalEnvelope, type ProgressIntent } from "@/lib/progress-cache";
-import { SAVINGS_GOAL_NAME, SAVINGS_GOAL_TARGET } from "@/lib/progress";
-import type { MissionRecord, PlayerProgress } from "@/lib/types";
+import type { LessonRecord, MissionRecord, PlayerProgress } from "@/lib/types";
 
 export type CloudRecord = {
   progress: PlayerProgress;
@@ -43,7 +42,7 @@ export function normalizeWriteRequest(raw: unknown): WriteRequest | null {
  * the higher count and star total, without adding the other device's coins again.
  */
 export function decideWrite(remote: CloudRecord | null, input: WriteRequest, now: string): WriteDecision {
-  const requested = { ...input, progress: withTownGoal(input.progress) };
+  const requested = input;
   if (remote && remote.lastMutationId === requested.mutationId) {
     return { type: "unchanged", record: remote, conflict: false, note: null };
   }
@@ -105,7 +104,7 @@ export function decideWrite(remote: CloudRecord | null, input: WriteRequest, now
       ? "Mission progress was combined. The cloud wallet was kept, and this device's coin changes were not added on top."
       : "Mission progress from this device was combined with the cloud save.",
     record: {
-      progress: withTownGoal(merged.progress),
+      progress: merged.progress,
       revision: remote.revision + 1,
       updatedAt: now,
       lastMutationId: input.mutationId,
@@ -155,17 +154,11 @@ export function sameWallet(left: PlayerProgress, right: PlayerProgress): boolean
     left.coins === right.coins &&
     left.savings === right.savings &&
     left.xp === right.xp &&
+    left.totalEarned === right.totalEarned &&
+    left.totalSpent === right.totalSpent &&
     JSON.stringify(left.badges) === JSON.stringify(right.badges) &&
     JSON.stringify(left.ledger) === JSON.stringify(right.ledger)
   );
-}
-
-function withTownGoal(progress: PlayerProgress): PlayerProgress {
-  return {
-    ...progress,
-    savingsGoalName: SAVINGS_GOAL_NAME,
-    savingsGoalTarget: SAVINGS_GOAL_TARGET,
-  };
 }
 
 function mergeMissionRecords(remote: PlayerProgress, local: PlayerProgress): { progress: PlayerProgress; changed: boolean } {
@@ -174,9 +167,23 @@ function mergeMissionRecords(remote: PlayerProgress, local: PlayerProgress): { p
     const current = missions[slug];
     missions[slug] = !current ? record : preferMission(current, record);
   }
-  const progress: PlayerProgress = { ...remote, missions };
-  const changed = JSON.stringify(progress.missions) !== JSON.stringify(remote.missions);
+  const lessons: Record<string, LessonRecord> = { ...remote.lessons };
+  for (const [slug, record] of Object.entries(local.lessons)) {
+    const current = lessons[slug];
+    lessons[slug] = !current ? record : preferLesson(current, record);
+  }
+  const progress: PlayerProgress = { ...remote, missions, lessons };
+  const changed =
+    JSON.stringify(progress.missions) !== JSON.stringify(remote.missions) ||
+    JSON.stringify(progress.lessons) !== JSON.stringify(remote.lessons);
   return { progress, changed };
+}
+
+function preferLesson(left: LessonRecord, right: LessonRecord): LessonRecord {
+  if (left.completed !== right.completed) return left.completed ? left : right;
+  if (left.bestCorrect !== right.bestCorrect) return left.bestCorrect > right.bestCorrect ? left : right;
+  if (left.attempts !== right.attempts) return left.attempts > right.attempts ? left : right;
+  return left.lastPlayedAt >= right.lastPlayedAt ? left : right;
 }
 
 function preferMission(left: MissionRecord, right: MissionRecord): MissionRecord {

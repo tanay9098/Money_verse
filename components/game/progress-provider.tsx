@@ -339,7 +339,8 @@ function isUntouched(progress: PlayerProgress): boolean {
     progress.xp === 0 &&
     progress.savings === 0 &&
     progress.badges.length === 0 &&
-    Object.keys(progress.missions).length === 0
+    Object.keys(progress.missions).length === 0 &&
+    Object.keys(progress.lessons).length === 0
   );
 }
 

@@ -1,4 +1,4 @@
-import { CHOICE_TAGS, DIFFICULTIES, ENGINES, type Lesson, type Mission } from "@/lib/types";
+import { CHOICE_TAGS, DIFFICULTIES, ENGINES, LESSON_ILLUSTRATIONS, type Lesson, type Mission } from "@/lib/types";
 
 const SLUG = /^[a-z0-9-]{1,80}$/;
 
@@ -34,12 +34,74 @@ export function validateLesson(raw: unknown): Lesson | null {
   const ageMin = intIn(raw.ageMin, 8, 12);
   const ageMax = intIn(raw.ageMax, 8, 12);
   const order = intIn(raw.order, 1, 99);
-  if (!slug || !SLUG.test(slug) || !title || !summary || !body || !topic || ageMin == null || ageMax == null || order == null) {
+  // Lessons saved before these fields existed stay valid: easy, read-only, no quiz.
+  const difficulty = raw.difficulty == null ? "easy" : oneOf(raw.difficulty, DIFFICULTIES);
+  const passPercent = intIn(raw.passPercent ?? 66, 1, 100);
+  if (
+    !slug ||
+    !SLUG.test(slug) ||
+    !title ||
+    !summary ||
+    !body ||
+    !topic ||
+    ageMin == null ||
+    ageMax == null ||
+    order == null ||
+    !difficulty ||
+    passPercent == null
+  ) {
     return null;
   }
   if (ageMax < ageMin) return null;
   if (!isApprovedForPlay(raw.reviewStatus)) return null;
-  return { id: slug, slug, title, summary, body, topic, ageMin, ageMax, order };
+
+  const objectives = validateObjectives(raw.objectives);
+  const sections = validateSections(raw.sections);
+  const quiz = raw.quiz == null ? [] : validateQuiz(raw.quiz, 0, 5);
+  if (!objectives || !sections || !quiz) return null;
+
+  let rewards: Lesson["rewards"] = null;
+  if (raw.rewards != null) {
+    if (!isRecord(raw.rewards)) return null;
+    const coins = intIn(raw.rewards.coins ?? 0, 0, 200);
+    const xp = intIn(raw.rewards.xp ?? 0, 0, 200);
+    if (coins == null || xp == null) return null;
+    // A reward needs a quiz to earn it. Reading alone never pays coins.
+    rewards = quiz.length > 0 && (coins > 0 || xp > 0) ? { coins, xp } : null;
+  }
+
+  return { id: slug, slug, title, summary, body, topic, difficulty, objectives, ageMin, ageMax, order, sections, quiz, passPercent, rewards };
+}
+
+function validateObjectives(raw: unknown): string[] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw) || raw.length > 5) return null;
+  const objectives: string[] = [];
+  for (const item of raw) {
+    const text = str(item, 200);
+    if (!text) return null;
+    objectives.push(text);
+  }
+  return objectives;
+}
+
+function validateSections(raw: unknown): Lesson["sections"] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw) || raw.length > 6) return null;
+  const sections: Lesson["sections"] = [];
+  const ids = new Set<string>();
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = str(item.id, 80);
+    const heading = str(item.heading, 80);
+    const body = str(item.body, 700);
+    const illustration = item.illustration == null ? null : oneOf(item.illustration, LESSON_ILLUSTRATIONS);
+    if (!id || !SLUG.test(id) || ids.has(id) || !heading || !body) return null;
+    if (item.illustration != null && !illustration) return null;
+    ids.add(id);
+    sections.push({ id, heading, body, illustration });
+  }
+  return sections;
 }
 
 function isApprovedForPlay(status: unknown): boolean {
@@ -147,23 +209,27 @@ function validateRewards(raw: unknown): Mission["rewards"] | null {
   return { xp, coins, badgeId, badgeName, badgeDescription };
 }
 
-function validateQuiz(raw: unknown): Mission["quiz"] | null {
-  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 6) return null;
+function validateQuiz(raw: unknown, min = 1, max = 6): Mission["quiz"] | null {
+  if (!Array.isArray(raw) || raw.length < min || raw.length > max) return null;
   const questions = [];
+  const questionIds = new Set<string>();
   for (const item of raw) {
     if (!isRecord(item)) return null;
     const id = str(item.id, 80);
     const prompt = str(item.prompt, 300);
-    if (!id || !SLUG.test(id) || !prompt || !Array.isArray(item.choices) || item.choices.length < 2 || item.choices.length > 4) {
+    if (!id || questionIds.has(id) || !SLUG.test(id) || !prompt || !Array.isArray(item.choices) || item.choices.length < 2 || item.choices.length > 4) {
       return null;
     }
+    questionIds.add(id);
     const choices = [];
+    const quizChoiceIds = new Set<string>();
     for (const choice of item.choices) {
       if (!isRecord(choice)) return null;
       const choiceId = str(choice.id, 80);
       const label = str(choice.label, 200);
       const explanation = str(choice.explanation, 400);
-      if (!choiceId || !SLUG.test(choiceId) || !label || !explanation || typeof choice.correct !== "boolean") return null;
+      if (!choiceId || quizChoiceIds.has(choiceId) || !SLUG.test(choiceId) || !label || !explanation || typeof choice.correct !== "boolean") return null;
+      quizChoiceIds.add(choiceId);
       choices.push({ id: choiceId, label, explanation, correct: choice.correct });
     }
     if (choices.filter((choice) => choice.correct).length !== 1) return null;

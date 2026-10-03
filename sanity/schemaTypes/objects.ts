@@ -267,3 +267,57 @@ export const reward = defineType({
     }),
   ],
 });
+
+export const lessonSection = defineType({
+  name: "lessonSection",
+  title: "Lesson section",
+  type: "object",
+  fields: [
+    slugId("id", "Id"),
+    defineField({ name: "heading", title: "Heading", type: "string", validation: (rule) => rule.required().max(80) }),
+    defineField({ name: "body", title: "Text", type: "text", rows: 4, validation: (rule) => rule.required().max(700) }),
+    defineField({
+      name: "illustration",
+      title: "Picture",
+      type: "string",
+      description: "A friendly icon shown beside the text.",
+      options: {
+        list: [
+          { title: "Coin", value: "coin" },
+          { title: "Savings jar", value: "jar" },
+          { title: "Shopping cart", value: "cart" },
+          { title: "Calendar", value: "calendar" },
+          { title: "Lemonade", value: "lemonade" },
+          { title: "Scales", value: "balance" },
+          { title: "Umbrella", value: "umbrella" },
+          { title: "Light bulb", value: "lightbulb" },
+        ],
+      },
+    }),
+  ],
+  preview: { select: { title: "heading", subtitle: "body" } },
+});
+
+export const lessonReward = defineType({
+  name: "lessonReward",
+  title: "Lesson reward",
+  type: "object",
+  fields: [
+    defineField({
+      name: "coins",
+      title: "Game coins",
+      type: "number",
+      components: { input: CoinField },
+      initialValue: 6,
+      description: "Fictional game coins, paid once. 0–200.",
+      validation: (rule) => rule.required().integer().min(0).max(200),
+    }),
+    defineField({
+      name: "xp",
+      title: "XP",
+      type: "number",
+      initialValue: 20,
+      validation: (rule) => rule.required().integer().min(0).max(200),
+    }),
+  ],
+});

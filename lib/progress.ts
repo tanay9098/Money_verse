@@ -1,15 +1,32 @@
-import { applyCoins, transferToSavings } from "@/lib/finance";
-import type { Badge, LedgerEntry, MissionRecord, PlayerProgress, Rewards, Stars } from "@/lib/types";
+import { awardCoins, MAX_LEDGER, transferToSavings } from "@/lib/economy";
+import type {
+  Badge,
+  LedgerEntry,
+  Lesson,
+  LessonRecord,
+  MissionRecord,
+  PlayerProgress,
+  Rewards,
+  Stars,
+} from "@/lib/types";
 
 export const PROGRESS_VERSION = 1 as const;
 export const STORAGE_KEY = "moneyverse.progress.v1";
 export const SAVINGS_GOAL_NAME = "Town bicycle";
 export const SAVINGS_GOAL_TARGET = 150;
 export const WELCOME_COINS = 20;
-const MAX_LEDGER = 40;
 const MAX_BADGES = 24;
 
-const LEDGER_KINDS = new Set<LedgerEntry["kind"]>(["welcome", "mission-reward", "savings-transfer"]);
+const MAX_LESSONS = 60;
+
+const LEDGER_KINDS = new Set<LedgerEntry["kind"]>([
+  "welcome",
+  "mission-reward",
+  "lesson-reward",
+  "savings-transfer",
+  "savings-withdraw",
+  "spend",
+]);
 
 export function createFreshProgress(now = new Date().toISOString()): PlayerProgress {
   return {
@@ -21,6 +38,9 @@ export function createFreshProgress(now = new Date().toISOString()): PlayerProgr
     savingsGoalTarget: SAVINGS_GOAL_TARGET,
     badges: [],
     missions: {},
+    lessons: {},
+    totalEarned: WELCOME_COINS,
+    totalSpent: 0,
     ledger: [
       {
         id: "welcome",
@@ -77,6 +97,26 @@ function parseMissionRecord(value: unknown): MissionRecord | null {
   };
 }
 
+function parseLessonRecord(value: unknown): LessonRecord | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.completed !== "boolean") return null;
+  if (!Number.isInteger(value.attempts) || (value.attempts as number) < 0) return null;
+  if (!Number.isInteger(value.bestCorrect) || (value.bestCorrect as number) < 0) return null;
+  if (!Number.isInteger(value.total) || (value.total as number) < 0) return null;
+  if ((value.bestCorrect as number) > (value.total as number)) return null;
+  if (!isIsoLike(value.lastPlayedAt)) return null;
+  if (!(value.completedAt === null || isIsoLike(value.completedAt))) return null;
+  if (value.completed && value.completedAt === null) return null;
+  return {
+    completed: value.completed,
+    attempts: value.attempts as number,
+    bestCorrect: value.bestCorrect as number,
+    total: value.total as number,
+    lastPlayedAt: value.lastPlayedAt,
+    completedAt: value.completedAt as string | null,
+  };
+}
+
 function parseLedger(value: unknown): LedgerEntry | null {
   if (!isRecord(value)) return null;
   if (!isNonEmptyString(value.id) || !isNonEmptyString(value.label) || !isIsoLike(value.at)) return null;
@@ -119,6 +159,10 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
     return { progress: createFreshProgress(), recovered: true };
   }
 
+  const rawLessons = isRecord(raw.lessons) ? raw.lessons : {};
+  if (Object.keys(rawLessons).length > MAX_LESSONS) {
+    return { progress: createFreshProgress(), recovered: true };
+  }
   const badges = raw.badges.map(parseBadge).filter((badge): badge is Badge => badge !== null);
   const ledger = raw.ledger.map(parseLedger).filter((entry): entry is LedgerEntry => entry !== null);
   const missions: Record<string, MissionRecord> = {};
@@ -128,7 +172,19 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
     if (record) missions[key] = record;
   }
 
+  const lessons: Record<string, LessonRecord> = {};
+  for (const [key, value] of Object.entries(rawLessons)) {
+    if (!/^[a-z0-9-]{1,80}$/.test(key)) continue;
+    const record = parseLessonRecord(value);
+    if (record) lessons[key] = record;
+  }
+
+  // Saves made before totals existed have no spending, so everything held was earned.
+  const totalSpent = Number.isInteger(raw.totalSpent) && (raw.totalSpent as number) >= 0 ? (raw.totalSpent as number) : 0;
+  const totalEarned = (raw.coins as number) + (raw.savings as number) + totalSpent;
+
   const dropped =
+    Object.keys(lessons).length !== Object.keys(rawLessons).length ||
     badges.length !== raw.badges.length ||
     ledger.length !== raw.ledger.length ||
     Object.keys(missions).length !== Object.keys(raw.missions).length;
@@ -144,6 +200,9 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
       savingsGoalTarget: raw.savingsGoalTarget as number,
       badges,
       missions,
+      lessons,
+      totalEarned,
+      totalSpent,
       ledger: ledger.slice(-MAX_LEDGER),
     },
   };
@@ -158,36 +217,21 @@ export function readStoredProgress(raw: string | null): { progress: PlayerProgre
   }
 }
 
-function withLedger(progress: PlayerProgress, entry: LedgerEntry): PlayerProgress {
-  return {
-    ...progress,
-    ledger: [...progress.ledger, entry].slice(-MAX_LEDGER),
-  };
-}
-
 export function moveCoinsToSavings(
   progress: PlayerProgress,
   amount: number,
   now = new Date().toISOString(),
 ): { ok: true; progress: PlayerProgress } | { ok: false; reason: "insufficient_funds" | "invalid_amount"; progress: PlayerProgress } {
-  const moved = transferToSavings(progress.coins, progress.savings, amount, progress.savingsGoalTarget);
-  if (!moved.ok) return { ok: false, reason: moved.reason, progress };
-  const next = withLedger(
-    {
-      ...progress,
-      coins: moved.wallet,
-      savings: moved.saved,
-    },
-    {
-      id: `save-${now}-${amount}`,
-      at: now,
-      label: `Moved to ${progress.savingsGoalName} jar`,
-      amount: -amount,
-      balanceAfter: moved.wallet,
-      kind: "savings-transfer",
-    },
-  );
-  return { ok: true, progress: next };
+  const moved = transferToSavings(progress, amount, now);
+  if (!moved.ok) {
+    return { ok: false, reason: moved.reason === "insufficient_funds" ? "insufficient_funds" : "invalid_amount", progress };
+  }
+  return { ok: true, progress: moved.progress };
+}
+
+function withBadge(progress: PlayerProgress, badge: Badge): PlayerProgress {
+  if (progress.badges.some((existing) => existing.id === badge.id)) return progress;
+  return { ...progress, badges: [...progress.badges, badge] };
 }
 
 export function grantMissionReward(
@@ -202,32 +246,40 @@ export function grantMissionReward(
 ): { progress: PlayerProgress; coinsAwarded: number; xpAwarded: number; badgeEarned: boolean } {
   const previous = progress.missions[input.slug];
   const firstClear = !previous || previous.completions === 0;
-  const coinsAwarded = firstClear ? input.rewards.coins : 0;
   const quizXp = Math.max(0, input.quizCorrect) * 5;
   const xpAwarded = firstClear ? input.rewards.xp + quizXp : 15 + quizXp;
-  const deposited = applyCoins(progress.coins, coinsAwarded);
-  const coins = deposited.ok ? deposited.balance : progress.coins;
-  const alreadyBadged = progress.badges.some((badge) => badge.id === input.rewards.badgeId);
-  const badgeEarned = firstClear && !alreadyBadged;
-  const badges = badgeEarned
-    ? [
-        ...progress.badges,
-        {
-          id: input.rewards.badgeId,
-          name: input.rewards.badgeName,
-          description: input.rewards.badgeDescription,
-          earnedAt: input.now,
-        },
-      ]
-    : progress.badges;
 
-  let next: PlayerProgress = {
-    ...progress,
-    coins,
-    xp: progress.xp + xpAwarded,
-    badges,
+  let next = progress;
+  let coinsAwarded = 0;
+  if (firstClear && input.rewards.coins > 0) {
+    const paid = awardCoins(progress, {
+      amount: input.rewards.coins,
+      label: `${input.rewards.badgeName} reward`,
+      kind: "mission-reward",
+      rewardKey: `mission:${input.slug}`,
+      now: input.now,
+    });
+    if (paid.ok) {
+      next = paid.progress;
+      coinsAwarded = input.rewards.coins;
+    }
+  }
+
+  const badgeEarned = firstClear && !next.badges.some((badge) => badge.id === input.rewards.badgeId);
+  if (badgeEarned) {
+    next = withBadge(next, {
+      id: input.rewards.badgeId,
+      name: input.rewards.badgeName,
+      description: input.rewards.badgeDescription,
+      earnedAt: input.now,
+    });
+  }
+
+  next = {
+    ...next,
+    xp: next.xp + xpAwarded,
     missions: {
-      ...progress.missions,
+      ...next.missions,
       [input.slug]: {
         completions: (previous?.completions ?? 0) + 1,
         bestStars: Math.max(previous?.bestStars ?? 1, input.stars) as Stars,
@@ -237,16 +289,70 @@ export function grantMissionReward(
     },
   };
 
-  if (coinsAwarded > 0) {
-    next = withLedger(next, {
-      id: `reward-${input.slug}-${input.now}`,
-      at: input.now,
-      label: `${input.rewards.badgeName} reward`,
-      amount: coinsAwarded,
-      balanceAfter: coins,
-      kind: "mission-reward",
-    });
+  return { progress: next, coinsAwarded, xpAwarded, badgeEarned };
+}
+
+export function lessonPassMark(lesson: Pick<Lesson, "quiz" | "passPercent">): number {
+  return Math.ceil((lesson.quiz.length * lesson.passPercent) / 100);
+}
+
+export type LessonGrant = {
+  progress: PlayerProgress;
+  passed: boolean;
+  /** True only on the attempt that completes the lesson for the first time. */
+  firstCompletion: boolean;
+  coinsAwarded: number;
+  xpAwarded: number;
+  correct: number;
+  total: number;
+};
+
+/**
+ * Records one quiz attempt. A lesson without a quiz completes when read.
+ * Coins and XP are paid once, on the first passing attempt, and never again.
+ */
+export function recordLessonAttempt(
+  progress: PlayerProgress,
+  lesson: Lesson,
+  answers: Record<string, string>,
+  now: string,
+): LessonGrant {
+  const total = lesson.quiz.length;
+  const correct = lesson.quiz.filter((question) =>
+    question.choices.some((choice) => choice.correct && choice.id === answers[question.id]),
+  ).length;
+  const passed = correct >= lessonPassMark(lesson);
+  const previous = progress.lessons[lesson.slug];
+  const firstCompletion = passed && !previous?.completed;
+
+  let next = progress;
+  let coinsAwarded = 0;
+  let xpAwarded = 0;
+  if (firstCompletion && lesson.rewards) {
+    xpAwarded = lesson.rewards.xp;
+    if (lesson.rewards.coins > 0) {
+      const paid = awardCoins(next, {
+        amount: lesson.rewards.coins,
+        label: `${lesson.title} lesson reward`,
+        kind: "lesson-reward",
+        rewardKey: `lesson:${lesson.slug}`,
+        now,
+      });
+      if (paid.ok) {
+        next = paid.progress;
+        coinsAwarded = lesson.rewards.coins;
+      }
+    }
   }
 
-  return { progress: next, coinsAwarded, xpAwarded, badgeEarned };
+  const record: LessonRecord = {
+    completed: Boolean(previous?.completed) || passed,
+    attempts: (previous?.attempts ?? 0) + 1,
+    bestCorrect: Math.max(previous?.bestCorrect ?? 0, correct),
+    total,
+    lastPlayedAt: now,
+    completedAt: previous?.completedAt ?? (passed ? now : null),
+  };
+  next = { ...next, xp: next.xp + xpAwarded, lessons: { ...next.lessons, [lesson.slug]: record } };
+  return { progress: next, passed, firstCompletion, coinsAwarded, xpAwarded, correct, total };
 }
