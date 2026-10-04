@@ -3,6 +3,15 @@ import { demoMissions } from "../lib/content/demo";
 import { starterLessons } from "../lib/content/lessons";
 import type { Lesson, Mission } from "../lib/types";
 
+// tsx does not read .env files the way Next.js does, so load them here.
+for (const file of [".env.local", ".env"]) {
+  try {
+    process.loadEnvFile(file);
+  } catch {
+    // The file does not exist. Real environment variables still work.
+  }
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
