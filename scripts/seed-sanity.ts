@@ -9,21 +9,32 @@ import type { Lesson, Mission } from "../lib/types";
 for (const file of [".env.local", ".env"]) {
   const path = resolve(process.cwd(), file);
   if (!existsSync(path)) continue;
-  const names: string[] = [];
+  const found = new Map<string, string>();
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
-    if (!match || match[1] in process.env) continue;
-    process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
-    names.push(match[1]);
+    if (!match) continue;
+    const value = match[2].replace(/^(['"])(.*)\1$/, "$2");
+    // A later line wins over an earlier one. Blank values never replace a real one.
+    if (value || !found.has(match[1])) found.set(match[1], value);
   }
-  // Names only. Values such as the token are never printed.
+  const names: string[] = [];
+  for (const [name, value] of found) {
+    // A real, non-empty variable from the shell wins. An empty one does not.
+    if (value && !process.env[name]) {
+      process.env[name] = value;
+      names.push(`${name} (${value.length} characters)`);
+    } else if (!value) {
+      names.push(`${name} (EMPTY)`);
+    }
+  }
+  // Names and lengths only. Values such as the token are never printed.
   console.log(`Read ${file}: ${names.length ? names.join(", ") : "no new variables found"}`);
 }
 
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`${name} is missing. Add it to .env.local. Never commit the token.`);
+    throw new Error(`${name} is missing or empty. Add it to .env.local. Never commit the token.`);
   }
   return value;
 }
