@@ -10,8 +10,7 @@ MoneyVerse is a financial-literacy game for children ages 8–12. Players help P
 - Lemonade Stand: supply costs, a chosen price, deterministic customers, and profit = revenue − expenses
 - A short knowledge check after each mission, plus replay
 - Practice coins stay inside the mission. The town wallet changes only for rewards and for savings the player moves on purpose
-- Anonymous progress in `localStorage` under `moneyverse.progress.v1`, with a confirmed reset
-- Guest play with progress saved in the browser (`localStorage`)
+- Anonymous progress saved in the browser (`localStorage`, key `moneyverse.progress.v1`), with a confirmed reset
 - Sanity Studio for lessons, missions, choices, quizzes, rewards, and age ranges
 - Built-in demo content when Sanity is not configured, is empty, or cannot be reached. The town screen says **Demo lessons** or **Studio lessons**
 
@@ -93,11 +92,16 @@ There are no accounts. Progress is saved in this browser's `localStorage` under 
   "savingsGoalTarget": 150,
   "badges": [],
   "missions": {},
-  "ledger": []
+  "lessons": {},
+  "totalEarned": 20,
+  "totalSpent": 0,
+  "ledger": [
+    { "id": "welcome", "at": "<ISO time>", "label": "Starter pack of fictional game coins", "amount": 20, "balanceAfter": 20, "kind": "welcome" }
+  ]
 }
 ```
 
-Missing data starts a new wallet with 20 starter game coins. Malformed numbers, the wrong version, or unreadable JSON replace the save with a fresh wallet and the town screen explains that. Broken badge rows are dropped.
+Missing data starts a new wallet with 20 starter game coins. Malformed numbers, the wrong version, or unreadable JSON replace the save with a fresh wallet and the town screen explains that. Broken badge rows are dropped. Saves written before `lessons` and the totals existed are still read, with those fields filled in.
 
 ## Deployment
 
@@ -111,16 +115,17 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 
 - `app/` routes: town, mission play, Studio
 - `components/game/` dashboard, mission play, local progress
+- `components/town.tsx` town scene and Pip
+- `lib/economy.ts` coin rules (wallet, jar, totals)
 - `lib/finance.ts` wallet, savings, lemonade math
 - `lib/mission-engine.ts` mission rules and results
 - `lib/progress.ts` versioned save data
-- `lib/content/` demo content, validation, Sanity fallback
+- `lib/content/` demo content, lessons, validation, Sanity fallback
 - `lib/sanity/` client, live content, and GROQ
-- `sanity/actions/` review actions
-- `sanity/components/` coin input and mission preview
-- `WRITEUP.md` challenge notes
-- `sanity/` schema
+- `sanity/` schema, plus `actions/` (review actions) and `components/` (coin input, mission preview)
+- `scripts/seed-sanity.ts` optional content seeding
 - `tests/` unit tests
+- `WRITEUP.md` challenge notes
 
 ## Privacy
 
@@ -146,7 +151,7 @@ The `production` dataset in Sanity project `8ndcaq5n` has no mission or lesson d
 3. Document actions: **Send for review** → **Approve** → **Publish**.
 4. Reload the town. Lessons: sections, a quiz of 1–5 single-choice questions (exactly one answer marked correct), a pass percentage (66 = 2 of 3), and an optional one-time coin/XP reward.
 
-Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://money-verse-orpin.vercel.app`) **with credentials allowed**. Only `http://localhost:3000` is registered today, so `/studio` on Vercel cannot sign in until this is added.
+Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://money-verse-orpin.vercel.app`) **with credentials allowed**.
 
 ### Route B: load the 3 missions and 8 starter lessons
 
@@ -168,7 +173,3 @@ All logic lives in `lib/economy.ts`; components call it and never compute balanc
 - **Goal target ≠ wallet ≠ savings.** The target (default 150, editable up to 1,000,000 in the app) only measures progress. How much can be saved at once is limited by the wallet, nothing else. Example: 100 in the wallet and 20 saved toward 150 → save 100 → 120 of 150, 30 left.
 - Save 5 / Save 10 / Save all / any typed amount move wallet → jar. **Take back** moves jar → wallet.
 - Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (missions) or nothing (lessons). Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
-
-## Persistence
-
-- Progress is saved in this browser's `localStorage`. Clearing site data erases it.
