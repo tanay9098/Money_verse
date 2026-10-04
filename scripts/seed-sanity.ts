@@ -1,15 +1,23 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createClient, type IdentifiedSanityDocumentStub } from "@sanity/client";
 import { demoMissions } from "../lib/content/demo";
 import { starterLessons } from "../lib/content/lessons";
 import type { Lesson, Mission } from "../lib/types";
 
-// tsx does not read .env files the way Next.js does, so load them here.
+// tsx does not read .env files the way Next.js does, so read them here (works on any Node version).
 for (const file of [".env.local", ".env"]) {
-  try {
-    process.loadEnvFile(file);
-  } catch {
-    // The file does not exist. Real environment variables still work.
+  const path = resolve(process.cwd(), file);
+  if (!existsSync(path)) continue;
+  const names: string[] = [];
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!match || match[1] in process.env) continue;
+    process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
+    names.push(match[1]);
   }
+  // Names only. Values such as the token are never printed.
+  console.log(`Read ${file}: ${names.length ? names.join(", ") : "no new variables found"}`);
 }
 
 function requireEnv(name: string): string {
