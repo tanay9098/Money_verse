@@ -57,9 +57,8 @@ function MissionScroller({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Dashboard({ content, authConfigured }: { content: ContentBundle; authConfigured: boolean }) {
-  const { ready, recovered, progress, signedIn, syncPhase, syncNote, save, reset, dismissHeld } = useProgress();
-  const cloudNote = signedIn ? syncStatusCopy(syncPhase, syncNote) : null;
+export function Dashboard({ content }: { content: ContentBundle }) {
+  const { ready, recovered, progress, save, reset } = useProgress();
   const [confirmReset, setConfirmReset] = useState(false);
   const nextMission =
     content.missions.find((mission) => (progress?.missions[mission.slug]?.completions ?? 0) === 0) ?? content.missions[0];
