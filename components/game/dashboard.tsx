@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bike, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
 import { Pip, TownScene } from "@/components/town";
-import { AccountMenu } from "@/components/game/account-menu";
-import { syncStatusCopy, useProgress } from "@/components/game/progress-provider";
+import { useProgress } from "@/components/game/progress-provider";
 import { Action, CoinPill, ProgressBar, StarRow } from "@/components/game/ui";
 import { SAVINGS_GOAL_NAME, SAVINGS_GOAL_TARGET } from "@/lib/progress";
 import { formatCoins, formatSignedCoins } from "@/lib/format";
@@ -27,9 +26,8 @@ const missionTint: Record<string, string> = {
   "lemonade-stand": "bg-[#fff1b8]",
 };
 
-export function Dashboard({ content, authConfigured }: { content: ContentBundle; authConfigured: boolean }) {
-  const { ready, recovered, progress, signedIn, syncPhase, syncNote, save, reset, dismissHeld } = useProgress();
-  const cloudNote = signedIn ? syncStatusCopy(syncPhase, syncNote) : null;
+export function Dashboard({ content }: { content: ContentBundle }) {
+  const { ready, recovered, progress, save, reset } = useProgress();
   const [confirmReset, setConfirmReset] = useState(false);
   const nextMission =
     content.missions.find((mission) => (progress?.missions[mission.slug]?.completions ?? 0) === 0) ?? content.missions[0];
@@ -47,7 +45,6 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
           MoneyVerse
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AccountMenu configured={authConfigured} />
           {ready && progress ? <CoinPill amount={progress.coins} /> : <span className="h-9 w-40 rounded-full bg-line" />}
         </div>
       </header>
@@ -97,8 +94,6 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
           totalEarned={progress?.totalEarned ?? 0}
           badges={progress?.badges ?? []}
           ledger={progress?.ledger ?? []}
-          cloudNote={cloudNote}
-          onDismissHeld={syncPhase === "conflict" ? dismissHeld : null}
           controls={progress ? <SavingsControls progress={progress} onChange={save} /> : null}
           onResetRequest={() => setConfirmReset(true)}
         />
@@ -162,9 +157,7 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
               Reset progress?
             </h2>
             <p className="mt-2 text-ink-soft">
-              {signedIn
-                ? "This clears badges, fictional game coins, and mission stars on this device. When you are online, the same reset is sent to your cloud save."
-                : "This clears badges, fictional game coins, and mission stars saved on this device. A signed-in cloud save is left as it is."}
+              This clears badges, fictional game coins, and mission stars saved on this device.
             </p>
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Action variant="secondary" onClick={() => setConfirmReset(false)}>
@@ -232,8 +225,6 @@ function WalletPanel({
   totalEarned,
   badges,
   ledger,
-  cloudNote,
-  onDismissHeld,
   controls,
   onResetRequest,
 }: {
@@ -246,8 +237,6 @@ function WalletPanel({
   totalEarned: number;
   badges: { id: string; name: string; description: string }[];
   ledger: { id: string; label: string; amount: number }[];
-  cloudNote: string | null;
-  onDismissHeld: (() => void) | null;
   controls: React.ReactNode;
   onResetRequest: () => void;
 }) {
@@ -267,16 +256,6 @@ function WalletPanel({
           <>
             <p className="mt-3 text-4xl font-extrabold">{formatCoins(coins)}</p>
             <p className="text-sm font-bold text-ink-soft">Fictional game coins. They cannot be exchanged for real money.</p>
-            {cloudNote ? (
-              <p className="mt-2 text-sm font-bold" role="status">
-                {cloudNote}{" "}
-                {onDismissHeld ? (
-                  <button type="button" className="underline" onClick={onDismissHeld}>
-                    Dismiss the aside copy
-                  </button>
-                ) : null}
-              </p>
-            ) : null}
             <div className="mt-5">
               <ProgressBar percent={goal.percent} label={`${goalName}: ${formatCoins(savings)} saved of ${formatCoins(goalTarget)}`} />
               <p className="mt-2 text-sm font-bold text-ink-soft">

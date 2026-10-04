@@ -11,7 +11,7 @@ MoneyVerse is a financial-literacy game for children ages 8–12. Players help P
 - A short knowledge check after each mission, plus replay
 - Practice coins stay inside the mission. The town wallet changes only for rewards and for savings the player moves on purpose
 - Anonymous progress in `localStorage` under `moneyverse.progress.v1`, with a confirmed reset
-- Optional Google sign-in, a private Sanity cloud save, and installable PWA support
+- Guest play with progress saved in the browser (`localStorage`)
 - Sanity Studio for lessons, missions, choices, quizzes, rewards, and age ranges
 - Built-in demo content when Sanity is not configured, is empty, or cannot be reached. The town screen says **Demo lessons** or **Studio lessons**
 
@@ -58,7 +58,7 @@ NEXT_PUBLIC_SANITY_API_VERSION=2026-01-01
 ```
 
 5. Start `npm run dev` and open `/studio`. Log in with your Sanity account.
-6. Optional: create a robot token with **Editor** rights and set `SANITY_API_WRITE_TOKEN` only in `.env.local`, then run `npm run seed:sanity`. That writes the demo missions and lessons. The token is server-only and is not read by the game UI.
+6. Optional: create a robot token with **Editor** rights and set `SANITY_API_WRITE_TOKEN` only in `.env.local`, then run `npm run seed:sanity`. That writes the demo missions and lessons. The token is used only by the seed script.
 7. For a private dataset, set `SANITY_API_READ_TOKEN` in `.env.local`. Do not prefix tokens with `NEXT_PUBLIC_`.
 
 Editors can change lesson text, mission descriptions, choice explanations, prices, supply costs, quiz answers, difficulty, and age ranges in Studio. Coin fields use a custom game-coin input. Each mission has a Play preview. Documents move from draft to in review to approved with Studio actions. The town queries only published documents whose `reviewStatus` is `approved`. Live Content refreshes the town after a publish when a Sanity project id is set. In local development, invalid or empty Sanity results fall back to demo content and the screen says so. In production they do not.
@@ -75,43 +75,13 @@ Editors can change lesson text, mission descriptions, choice explanations, price
 - Mission rewards are paid once. Replays can still update stars and grant a smaller XP amount.
 - The town wallet cannot go below zero. The lemonade mission does not teach borrowing; an unaffordable supply batch stays disabled.
 
-## Accounts, cloud save, and PWA
+## Saving progress
 
-Google sign-in is optional. Guests keep playing, and their save stays in `moneyverse.progress.v1`. Signing in does not copy that guest save onto the Google account. Each signed-in save is stored separately under `moneyverse.progress.v1.player.google%3A<subject>` and is shown only while that Google account is signed in.
-
-The durable copy is a Sanity document of type `playerProgress`. The server writes it with `SANITY_API_WRITE_TOKEN` after checking the Auth.js session. The browser cannot choose the player id. Documents use unpublished `drafts.` ids so a public dataset's content API does not return them. Do not publish those drafts. Studio does not list them in the Missions or Lessons desk, and Publish is removed for that type.
-
-Sync rules:
-
-- A change is written to this browser first, then sent when the network is available.
-- Retries send the same mutation id so a repeated request does not apply twice.
-- If two devices diverge, the cloud wallet (coins, savings, XP, badges, and the coin notes) is kept. Mission completion is combined by the higher completion count and star total, without adding the other device's coins again.
-- The device copy that was not applied is kept aside in that browser. The town says so. It is not written onto the cloud wallet.
-- Sign-out hides the account save. A fully synced local copy is removed from this browser. An unsynced copy, or an aside copy, stays under that player's key so the same account can try again. Clearing site data removes only the browser copy. A save that already reached Sanity can be loaded again by signing in.
-- Until a change syncs, the town does not say the cloud save is stored. Offline changes that never reach Sanity are lost if site data is cleared or the browser profile is removed.
-
-The web app manifest is generated at `/manifest.webmanifest`. A service worker at `/sw.js` is registered in production. It caches the app shell and static files for offline opening, and it does not cache `/api/*` or `/studio`. Installed and browser copies share progress when they share the origin and browser storage. Full offline play depends on pages and assets that have already been cached.
-
-### Google OAuth setup
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), create or select a project.
-2. Configure the OAuth consent screen. The app only needs identity. Do not add Gmail, Drive, Contacts, or other scopes.
-3. Enable the Google Identity services that back OAuth if the console asks you to. Auth.js uses OpenID Connect (`openid` and `profile` only).
-4. Create an OAuth 2.0 **Web application** client.
-5. Add authorized JavaScript origins:
-   - `http://localhost:3000`
-   - the production origin, for example `https://your-domain.example`
-6. Add authorized redirect URIs:
-   - `http://localhost:3000/api/auth/callback/google`
-   - `https://your-domain.example/api/auth/callback/google`
-7. Put `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` in the server environment, plus `AUTH_URL` set to that origin. `AUTH_URL` is the canonical origin Auth.js uses for redirects, and setting it marks the host as trusted. Set `SANITY_API_WRITE_TOKEN` as well or the cloud save returns unavailable and progress stays on the device.
-8. Vercel sets `VERCEL=1`, which also satisfies Auth.js host trust. If a deployment's host changes and you cannot set one `AUTH_URL`, set `AUTH_TRUST_HOST=true` and add that host's redirect URI in Google. A fixed `AUTH_URL` always wins for the callback origin.
-
-Google sign-in is not working until those values are present and the redirect URI matches. A failed sign-in returns to `/auth/error` and leaves the guest game in place.
+There are no accounts. Progress is saved in this browser's `localStorage` under `moneyverse.progress.v1`. It is not synced between browsers or devices, and clearing site data erases it. Reset progress any time from the town wallet.
 
 ## Progress schema
 
-`localStorage` key for guests: `moneyverse.progress.v1`
+`localStorage` key: `moneyverse.progress.v1`
 
 ```json
 {
@@ -131,11 +101,11 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 
 ## Deployment
 
-- Deploy the Next.js app on Vercel or another Node host. Set the same public Sanity variables in the host. Set read or write tokens, `GOOGLE_CLIENT_SECRET`, and `AUTH_SECRET` only as server environment variables.
+- Deploy the Next.js app on Vercel or another Node host. Set the same public Sanity variables in the host. Set read or write tokens only as server environment variables.
 - Studio is the `/studio` route of this app. Sanity hosts the content; this app hosts the editor UI.
 - `npm run build` then `npm run start` is the production pair.
 - Add the production URL to Sanity CORS origins before logging into Studio there.
-- Do not add analytics, ads, chat, or payments. Google sign-in is the only account option, and it is optional.
+- Do not add analytics, ads, chat, or payments. There are no accounts.
 
 ## Project map
 
@@ -144,9 +114,6 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 - `lib/finance.ts` wallet, savings, lemonade math
 - `lib/mission-engine.ts` mission rules and results
 - `lib/progress.ts` versioned save data
-- `lib/progress-sync.ts` cloud merge rules
-- `auth.ts` Google sign-in session
-- `app/api/progress/route.ts` private progress read and write
 - `lib/content/` demo content, validation, Sanity fallback
 - `lib/sanity/` client, live content, and GROQ
 - `sanity/actions/` review actions
@@ -157,7 +124,7 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 
 ## Privacy
 
-No birth dates, location, or real financial data. Google sign-in can receive the account's display name and profile image. Email is not requested. No advertising, purchases, stranger chat, or public leaderboards. Reset progress any time from the town wallet.
+No birth dates, location, or real financial data. No advertising, purchases, stranger chat, or public leaderboards. Reset progress any time from the town wallet.
 
 ## Content guide: publishing missions and lessons
 
@@ -189,7 +156,7 @@ npm run seed:sanity            # dry run: lists the 11 documents, writes nothing
 npm run seed:sanity -- --yes   # writes them as approved + published
 ```
 
-The script only creates or replaces documents whose ids start with `mission-` or `lesson-` and are listed in the dry run. It never deletes anything and never touches `playerProgress`. Run it only when you want those documents in production.
+The script only creates or replaces documents whose ids start with `mission-` or `lesson-` and are listed in the dry run. It never deletes anything. Run it only when you want those documents in production.
 
 ## Game economy rules
 
@@ -202,8 +169,6 @@ All logic lives in `lib/economy.ts`; components call it and never compute balanc
 - Save 5 / Save 10 / Save all / any typed amount move wallet → jar. **Take back** moves jar → wallet.
 - Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (missions) or nothing (lessons). Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
 
-## Persistence and sign-in
+## Persistence
 
-- **Guests:** progress is saved in this browser's `localStorage`. Clearing site data erases it.
-- **Signed in:** Google sign-in stores the same progress in a private `playerProgress` document (server token only). On a conflict the cloud wallet wins; mission and lesson completion are merged (the higher result is kept), and each write carries a `mutationId` so retries are not applied twice. Signing in does not move a guest game onto the account.
-- **Why the header says "Google sign-in is not set up":** `isGoogleAuthConfigured()` needs all of `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET` on the server. Set them in Vercel (Production), add `https://<your-site>/api/auth/callback/google` as an authorized redirect URI in Google Cloud, and set `AUTH_URL`. Without `AUTH_SECRET` the browser console shows an Auth.js `MissingSecret` message; the game still works as a guest.
+- Progress is saved in this browser's `localStorage`. Clearing site data erases it.

@@ -21,7 +21,7 @@ Studio customization that belongs to this game:
 
 The seed script writes the built-in missions and lessons as `approved`.
 
-Optional Google sign-in and a private player-progress draft were added later. Lesson and mission documents are unchanged. Guest play still uses the original local save. Cloud writes go through a server route that reads the Auth.js session, and the write token stays server-side.
+Progress is saved only in the browser's local storage. There are no accounts, cloud save, or offline install support.
 
 ## What this still is not
 

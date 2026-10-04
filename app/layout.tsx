@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import { AppProviders } from "@/components/game/app-providers";
-import { PwaRegister } from "@/components/game/pwa-register";
 import { SanityLive } from "@/lib/sanity/live";
 import "./globals.css";
 
@@ -21,11 +20,6 @@ export const metadata: Metadata = {
   title: "MoneyVerse",
   description: "A fictional-coin game that helps children practice needs, wants, saving, and profit.",
   applicationName: "MoneyVerse",
-  appleWebApp: {
-    capable: true,
-    title: "MoneyVerse",
-    statusBarStyle: "default",
-  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -44,7 +38,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${fredoka.variable} ${nunito.variable} h-full`}>
       <body className="min-h-full font-sans text-ink antialiased">
         <AppProviders>{children}</AppProviders>
-        <PwaRegister />
         <SanityLive />
       </body>
     </html>
