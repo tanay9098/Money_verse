@@ -116,14 +116,20 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-3">
+            <div
+              className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-4"
+              role="region"
+              aria-label="Missions, scroll sideways for more"
+              tabIndex={0}
+            >
               {content.missions.map((mission) => (
-                <MissionCard
-                  key={mission.slug}
-                  mission={mission}
-                  stars={progress?.missions[mission.slug]?.bestStars ?? 0}
-                  completions={progress?.missions[mission.slug]?.completions ?? 0}
-                />
+                <div key={mission.slug} className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)]">
+                  <MissionCard
+                    mission={mission}
+                    stars={progress?.missions[mission.slug]?.bestStars ?? 0}
+                    completions={progress?.missions[mission.slug]?.completions ?? 0}
+                  />
+                </div>
               ))}
             </div>
           )}
