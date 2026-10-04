@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { Bike, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
+import { Bike, ChevronLeft, ChevronRight, CupSoda, PiggyBank, RotateCcw, ShoppingBasket } from "lucide-react";
 import { Pip, TownScene } from "@/components/town";
 import { AccountMenu } from "@/components/game/account-menu";
 import { syncStatusCopy, useProgress } from "@/components/game/progress-provider";
@@ -26,6 +26,37 @@ const missionTint: Record<string, string> = {
   "savings-quest": "bg-[#d9f3e4]",
   "lemonade-stand": "bg-[#fff1b8]",
 };
+
+function MissionScroller({ children }: { children: React.ReactNode }) {
+  const track = useRef<HTMLDivElement>(null);
+  const scrollBy = (dir: 1 | -1) => {
+    const el = track.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+  };
+  const btn =
+    "grid h-10 w-10 place-items-center rounded-full border-2 border-ink/20 bg-white text-ink shadow-sm hover:bg-[#fff1b8] focus-visible:outline focus-visible:outline-2";
+  return (
+    <div>
+      <div className="mb-2 flex justify-end gap-2">
+        <button type="button" className={btn} onClick={() => scrollBy(-1)} aria-label="Previous missions">
+          <ChevronLeft aria-hidden size={20} />
+        </button>
+        <button type="button" className={btn} onClick={() => scrollBy(1)} aria-label="Next missions">
+          <ChevronRight aria-hidden size={20} />
+        </button>
+      </div>
+      <div
+        ref={track}
+        className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-1 pb-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [touch-action:pan-x_pan-y]"
+        role="region"
+        aria-label="Missions, scroll sideways for more"
+        tabIndex={0}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function Dashboard({ content, authConfigured }: { content: ContentBundle; authConfigured: boolean }) {
   const { ready, recovered, progress, signedIn, syncPhase, syncNote, save, reset, dismissHeld } = useProgress();
@@ -116,16 +147,17 @@ export function Dashboard({ content, authConfigured }: { content: ContentBundle;
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-3">
+            <MissionScroller>
               {content.missions.map((mission) => (
-                <MissionCard
-                  key={mission.slug}
-                  mission={mission}
-                  stars={progress?.missions[mission.slug]?.bestStars ?? 0}
-                  completions={progress?.missions[mission.slug]?.completions ?? 0}
-                />
+                <div key={mission.slug} className="w-[85%] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]">
+                  <MissionCard
+                    mission={mission}
+                    stars={progress?.missions[mission.slug]?.bestStars ?? 0}
+                    completions={progress?.missions[mission.slug]?.completions ?? 0}
+                  />
+                </div>
               ))}
-            </div>
+            </MissionScroller>
           )}
         </section>
 
