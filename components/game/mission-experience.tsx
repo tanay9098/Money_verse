@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { Pip } from "@/components/town";
-import { AccountMenu } from "@/components/game/account-menu";
 import { useProgress } from "@/components/game/progress-provider";
 import { Action, CoinPill, ProgressBar, StarRow, cn } from "@/components/game/ui";
 import { formatCoins } from "@/lib/format";
@@ -22,7 +21,7 @@ import type { ChoiceSession, LemonadeResult, Mission, MissionOutcome, QuizQuesti
 
 type RewardView = { coinsAwarded: number; xpAwarded: number; badgeEarned: boolean; badgeName: string };
 
-export function MissionExperience({ mission, authConfigured }: { mission: Mission; authConfigured: boolean }) {
+export function MissionExperience({ mission }: { mission: Mission }) {
   const { ready, progress, save } = useProgress();
   const [phase, setPhase] = useState<"intro" | "play" | "results" | "quiz" | "done">("intro");
   const [playId, setPlayId] = useState(0);
@@ -71,7 +70,6 @@ export function MissionExperience({ mission, authConfigured }: { mission: Missio
           Town
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AccountMenu configured={authConfigured} />
           {ready && progress ? <CoinPill amount={progress.coins} /> : null}
         </div>
       </div>

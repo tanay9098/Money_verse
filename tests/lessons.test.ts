@@ -5,7 +5,6 @@ import { validateLesson, validateLessons } from "@/lib/content/validate";
 import { demoMissions } from "@/lib/content/demo";
 import { checkInvariants } from "@/lib/economy";
 import { createFreshProgress, lessonPassMark, recordLessonAttempt } from "@/lib/progress";
-import { decideWrite, type CloudRecord } from "@/lib/progress-sync";
 import type { Lesson } from "@/lib/types";
 
 const now = "2026-01-02T00:00:00.000Z";
@@ -114,21 +113,6 @@ describe("quiz scoring and rewards", () => {
     const result = recordLessonAttempt(createFreshProgress(now), readOnly, {}, now);
     expect(result).toMatchObject({ passed: true, firstCompletion: true, coinsAwarded: 0 });
     expect(result.progress.coins).toBe(20);
-  });
-
-  it("does not let a completed lesson be lost when a cloud save diverged", () => {
-    const local = recordLessonAttempt(createFreshProgress(now), lesson, allCorrect(lesson), now).progress;
-    const remote: CloudRecord = { progress: createFreshProgress(now), revision: 4, updatedAt: now, lastMutationId: "other-mutation" };
-    const decision = decideWrite(remote, { progress: local, baseRevision: 1, mutationId: "mutation-2", intent: "save" }, now);
-    expect(decision.type).toBe("write");
-    expect(decision.record.progress.lessons[lesson.slug].completed).toBe(true);
-    expect(decision.record.progress.coins).toBe(20);
-  });
-
-  it("keeps a custom savings goal when writing to the cloud", () => {
-    const custom = { ...createFreshProgress(now), savingsGoalName: "Skateboard", savingsGoalTarget: 400 };
-    const decision = decideWrite(null, { progress: custom, baseRevision: null, mutationId: "mutation-3", intent: "save" }, now);
-    expect(decision.record.progress).toMatchObject({ savingsGoalName: "Skateboard", savingsGoalTarget: 400 });
   });
 });
 
