@@ -71,7 +71,7 @@ Editors can change lesson text, mission descriptions, choice explanations, price
 - Income is coins coming in. A budget is the plan for using them.
 - Revenue = cups sold × price. Expenses are supply costs. Profit = revenue − expenses. A negative result is a loss.
 - Simple interest in Savings Quest is a flat 3 game coins on a week the practice jar is left untouched. The copy says real investing can lose money.
-- Mission rewards are paid once. Replays can still update stars and grant a smaller XP amount.
+- Mission rewards are paid once. A first clear gives the mission's XP reward plus 5 XP per correct quiz answer. A replay can still update stars and gives 15 XP plus 5 XP per correct quiz answer.
 - The town wallet cannot go below zero. The lemonade mission does not teach borrowing; an unaffordable supply batch stays disabled.
 
 ## Saving progress
@@ -122,10 +122,12 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 - `lib/progress.ts` versioned save data
 - `lib/content/` demo content, lessons, validation, Sanity fallback
 - `lib/sanity/` client, live content, and GROQ
-- `sanity/` schema, plus `actions/` (review actions) and `components/` (coin input, mission preview)
+- `sanity.config.ts` Studio configuration
+- `sanity/` schema, `structure.ts` (desk layout), `env.ts`, `actions/` (review actions), `components/` (coin input, mission preview), and `lib/` (Studio-side client and live setup, separate from `lib/sanity/`)
 - `scripts/seed-sanity.ts` optional content seeding
 - `tests/` unit tests
 - `WRITEUP.md` challenge notes
+- `studio-content-draft.md` optional sample content to type into Studio (safe to delete)
 
 ## Privacy
 
@@ -142,16 +144,16 @@ The two are separate on purpose. Approving without publishing keeps content hidd
 
 ### Why the deployed town says "No approved missions yet"
 
-The `production` dataset in Sanity project `8ndcaq5n` has no mission or lesson documents (Studio overview: Documents 0 / 10k). Nothing in the code hides them. Add and publish content using either route below.
+The dataset has no documents that are both approved and published (or the project id, dataset, or CORS settings are wrong). Nothing in the code hides approved, published content. Add and publish content using either route below.
 
 ### Route A: write content in Studio (`/studio`)
 
 1. Open `https://<your-site>/studio` and sign in with the Sanity account.
 2. **Missions** or **Lessons** → create a document and fill the required fields. Studio shows validation messages on each field.
 3. Document actions: **Send for review** → **Approve** → **Publish**.
-4. Reload the town. Lessons: sections, a quiz of 1–5 single-choice questions (exactly one answer marked correct), a pass percentage (66 = 2 of 3), and an optional one-time coin/XP reward.
+4. Reload the town. Lessons: sections, a quiz of up to 5 single-choice questions (exactly one answer marked correct; leave the quiz empty for a read-only lesson), a pass percentage (66 = 2 of 3), and an optional one-time coin/XP reward.
 
-Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://money-verse-orpin.vercel.app`) **with credentials allowed**.
+Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://<your-site>`) **with credentials allowed**.
 
 ### Route B: load the 3 missions and 8 starter lessons
 
@@ -172,4 +174,4 @@ All logic lives in `lib/economy.ts`; components call it and never compute balanc
 - Wallet, jar, and total earned always agree: `wallet + savings + spent = total earned`.
 - **Goal target ≠ wallet ≠ savings.** The target (default 150, editable up to 1,000,000 in the app) only measures progress. How much can be saved at once is limited by the wallet, nothing else. Example: 100 in the wallet and 20 saved toward 150 → save 100 → 120 of 150, 30 left.
 - Save 5 / Save 10 / Save all / any typed amount move wallet → jar. **Take back** moves jar → wallet.
-- Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (missions) or nothing (lessons). Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
+- Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (15 + 5 per correct quiz answer) for missions, or nothing for lessons. Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
