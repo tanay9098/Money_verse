@@ -64,6 +64,34 @@ Editors can change lesson text, mission descriptions, choice explanations, price
 
 `goalAmount` turns a choice mission into a savings goal. Leave it empty to score needs instead (`needsRequired`). The lemonade play style uses supply batches and prices. Customer counts are fixed rules, not random chance.
 
+## Content model
+
+The Sanity schema lives in [`sanity/schemaTypes/`](sanity/schemaTypes/) and is registered in `index.ts`. The game reads it with the GROQ queries in [`lib/sanity/queries.ts`](lib/sanity/queries.ts).
+
+**Documents**
+
+| Type | File | Main fields |
+|---|---|---|
+| `mission` | `mission.ts` | `title`, `slug`, `summary`, `story`, `learningGoal`, `topic`, `difficulty` (easy/medium/hard), `ageMin`/`ageMax` (8–12), `order`, `engine` (`choices` or `lemonade`), `startingCoins`, `goalAmount`, `needsRequired`, `successHeadline`, `practiceHeadline`, `steps[]`, `supplies[]`, `prices[]`, `lemonadeIntro`, `quiz[]`, `rewards` |
+| `lesson` | `lesson.ts` | `title`, `slug`, `summary`, `body`, `topic`, `difficulty`, `objectives[]`, `sections[]`, `quiz[]` (up to 5 questions), `passPercent`, `rewards`, `ageMin`/`ageMax`, `order` |
+
+**Review workflow (both documents).** `review.ts` adds `reviewStatus` (`draft`, `inReview`, `approved`) and a `reviewerNote` that players never see. The Studio actions in `sanity/actions/reviewActions.tsx` are "Send for review" and "Approve". Both queries filter on `reviewStatus == "approved"` and read the `published` perspective, so a document must be approved **and** published to appear in the game.
+
+**Reusable objects** (`objects.ts`)
+
+| Object | Used by | Purpose |
+|---|---|---|
+| `missionStep` | `mission.steps` | One round: `income`, `incomeLabel`, `choices[]` |
+| `choiceOption` | `missionStep.choices` | A choice: `coinDelta`, `bonusCoins`, `tag` (need/want/save/spend), `meetsNeed`, feedback text |
+| `supplyOption` | `mission.supplies` | Lemonade supply batch: `cost`, `cups` |
+| `priceOption` | `mission.prices` | Lemonade price and its fixed `customers` count |
+| `quizQuestion` / `quizChoice` | `quiz` | Single-choice question; exactly one `correct` answer, each with an `explanation` |
+| `reward` | `mission.rewards` | `xp`, `coins`, `badgeId`, `badgeDescription` |
+| `lessonSection` | `lesson.sections` | Heading, text, and a picture from a fixed icon list |
+| `lessonReward` | `lesson.rewards` | One-time `coins` and `xp` |
+
+**Studio customization.** Coin fields use `sanity/components/CoinField.tsx`. Missions get a Play preview tab through `sanity/structure.ts` and `sanity/components/MissionPreview.tsx`. Play styles, scoring, and customer rules stay in TypeScript, so editors change content and numbers, not game mechanics.
+
 ## Game design
 
 - Needs help a person stay healthy, safe, or ready to learn. Wants are nice to have. Wants are not treated as failures.
