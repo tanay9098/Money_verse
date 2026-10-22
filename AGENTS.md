@@ -7,3 +7,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# MoneyVerse project docs
+
+Read these before changing code:
+
+1. [MEMORY.md](MEMORY.md): current state, open issues, and change log. Update it after every change.
+2. [RULES.md](RULES.md): no unnecessary dependencies, don't break existing APIs or contracts, test after every change.
+3. [ARCHITECTURE.md](ARCHITECTURE.md): tech stack, folder structure, data stores, and request/data flows.
+4. [PRD.md](PRD.md): product goals, target users, and functional and non-functional requirements.

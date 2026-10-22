@@ -151,9 +151,13 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 - `lib/content/` demo content, lessons, validation, Sanity fallback
 - `lib/sanity/` client, live content, and GROQ
 - `sanity.config.ts` Studio configuration
-- `sanity/` schema, `structure.ts` (desk layout), `env.ts`, `actions/` (review actions), `components/` (coin input, mission preview), and `lib/` (Studio-side client and live setup, separate from `lib/sanity/`)
+- `sanity/` schema, `structure.ts` (desk layout), `env.ts`, `actions/` (review actions), `components/` (coin input, mission preview), and `lib/` (unused `sanity init` scaffold; the game uses `lib/sanity/`, see ARCHITECTURE.md)
 - `scripts/seed-sanity.ts` optional content seeding
 - `tests/` unit tests
+- `PRD.md` product requirements: goals, target users, requirements
+- `ARCHITECTURE.md` stack, folders, data stores, and data flows
+- `RULES.md` working rules (dependencies, compatibility, testing)
+- `MEMORY.md` current state and change log for the next contributor
 - `WRITEUP.md` challenge notes
 - `studio-content-draft.md` optional sample content to type into Studio (safe to delete)
 
