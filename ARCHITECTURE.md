@@ -116,15 +116,15 @@ flowchart LR
   subgraph "Next.js server"
     PAGE["Server pages<br/>app/page.tsx<br/>app/missions/[slug]/page.tsx"]
     LOAD["lib/content/load.ts<br/>loadContent()"]
-    RES["lib/content/resolve.ts<br/>+ validate.ts"]
     DEMO["lib/content/demo.ts<br/>lessons.ts"]
+    RES["lib/content/resolve.ts<br/>+ validate.ts"]
   end
   CL[("Sanity Content Lake<br/>mission, lesson docs")]
   SEED["scripts/seed-sanity.ts"]
 
   PAGE --> LOAD --> RES
+  DEMO <-- "fallback (dev only)" --- RES
   RES -- "GROQ via sanityFetch" --> CL
-  RES -- "fallback (dev only)" --> DEMO
   PAGE -- "ContentBundle props" --> UI
   UI <-- "read / write" --> LS
   STU <-- "Sanity APIs (editor login)" --> CL

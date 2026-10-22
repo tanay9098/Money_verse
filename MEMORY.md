@@ -40,6 +40,7 @@ A short context file for the next person or AI tool. Read this first, then [RULE
 
 Use this format: `YYYY-MM-DD — short title — files touched — tests run and results — notes`.
 
+- **2026-10-22 — Fixed hidden "GROQ" label in ARCHITECTURE §4 diagram.** Docs only. The `GROQ via sanityFetch` edge label was covered by the `demo.ts` node. Moved `DEMO` before `RES` and drew the fallback edge as `DEMO <-- ... --- RES`, so the label now renders fully. Checked by rendering the diagram with mermaid-cli. No code changed.
 - **2026-10-22 — Added PRD.md.** Docs only. Covers problem, goals and non-goals, personas, user stories, functional requirements (FR-x, marked Shipped or Proposed, checked against the code), NFRs, offline success metrics, risks, roadmap, and open questions. Found the `goal-getter` badge id clash (open issue above). Linked from AGENTS.md and the README project map. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean.
 - **2026-10-22 — Added ARCHITECTURE.md, RULES.md, MEMORY.md.** Docs only. Checked the architecture against the code and recorded the inconsistencies in ARCHITECTURE §10. Added a short pointer section to `AGENTS.md` below the managed block. In the README project map, listed the new docs and corrected the `sanity/lib/` description. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean. No code changed.
 - **Earlier history:**
