@@ -4,7 +4,7 @@ A short context file for the next person or AI tool. Read this first, then [RULE
 
 **Update this file after every change.** Add a change-log entry at the top of section 4, and edit sections 1–3 if they are no longer true.
 
-## 1. Current state (as of 2026-10-22, commit `5463c5f`)
+## 1. Current state (as of 2026-10-22, after the docs-vs-code consistency fixes)
 
 - **What it is:** a financial-literacy game for ages 8–12 that uses fictional coins. It is one Next.js 16 app with Sanity Studio at `/studio`.
 - **Works today:**
@@ -12,34 +12,35 @@ A short context file for the next person or AI tool. Read this first, then [RULE
   - 3 missions: Needs vs Wants, Savings Quest, Lemonade Stand. Each has a quiz and can be replayed.
   - 8 starter lessons with quizzes and one-time rewards.
   - Progress saved in `localStorage` (`moneyverse.progress.v1`), with reset.
-  - Studio with a review workflow (Draft → In review → Approved → Publish), coin input, and a mission Play preview.
+  - Studio with an enforced review workflow (Draft → In review → Approved → Publish; Publish is gated, edits after approval need re-review), validation that matches the game's, coin input, and a mission Play preview.
   - Demo-content fallback in dev. Empty "unavailable" state in prod.
   - Seed script.
 - **Removed on purpose** (do not re-add without asking): Google sign-in, cloud save, PWA/offline install, the "For grownups nearby" dashboard section.
-- **Quality gates:** `npm run test` (6 files, 55 tests), `typecheck`, and `lint` all pass on this commit.
+- **Quality gates:** `npm run test` (8 files, 64 tests), `typecheck`, `lint`, and `build` all pass.
 - **Not covered by tests:** React components and end-to-end flows. Test those by hand with `npm run dev`.
 
 ## 2. Key facts to remember
 
 - Content: Sanity GROQ (`lib/sanity/queries.ts`) → `validate.ts` → `resolve.ts` → `ContentBundle` → client components. Only **approved and published** documents show.
 - Progress: client-only. `ProgressProvider` (`useSyncExternalStore`) → pure functions in `lib/economy.ts` and `lib/progress.ts` → `save()` → `localStorage`.
-- Invariant: `coins + savings + totalSpent === totalEarned`. Rewards are paid once through ledger id `reward:mission:<slug>` or `reward:lesson:<slug>`.
+- Invariant: `coins + savings + totalSpent === totalEarned` (`totalEarned` is recalculated on load). Rewards are paid once: the mission/lesson record is the guard; ledger ids `reward:mission:<slug>` / `reward:lesson:<slug>` are a secondary check (ledger capped at 40).
+- Review gate: `approvedHash` (from `lib/review-hash.ts`) is set by Approve; `withReviewGate` disables Publish unless the draft still matches. Studio/game content rules are shared in `lib/content/rules.ts`.
 - No API routes, no DB, no auth, no middleware. Tokens are server-only.
 - Mission slugs: `needs-vs-wants`, `savings-quest`, `lemonade-stand`. Engines: `choices` (first two) and `lemonade`.
 - `AGENTS.md`'s top block is rewritten by `next dev`. Edit only below the `END:nextjs-agent-rules` marker. `CLAUDE.md` should stay exactly `@AGENTS.md`.
 
 ## 3. Open issues and next steps
 
-- Unused scaffold: `sanity/env.ts` and `sanity/lib/*`. It has a mismatched API version default, throws when env is missing, and uses the transitive `@sanity/image-url`. Delete it or wire it in (ARCHITECTURE §10).
-- `getSanityClient()` in `lib/sanity/client.ts` is unused.
 - `spendCoins` has no UI caller yet (kept for a future shop).
 - Badge id clash: the Savings Quest mission badge and the real-savings goal badge are both `goal-getter`. If the mission is cleared first, the goal's badge and 25 XP never arrive (PRD FR-4.4, §12 Q6). Owner to decide.
-- No component or E2E tests.
+- No component or E2E tests. The Studio review gate and validation rules were not exercised in a live Studio (no project id in the dev environment); their pure logic is unit tested.
+- The review gate is Studio-only. API/CLI writes can still publish unapproved content; the GROQ filter remains the final check.
 
 ## 4. Change log (newest first)
 
 Use this format: `YYYY-MM-DD — short title — files touched — tests run and results — notes`.
 
+- **2026-10-22 — Fixed docs-vs-code inconsistencies.** Code: enforced the Studio review gate (read-only `reviewStatus`, `approvedHash`, gated Publish, "Send for review again"; `lib/review-hash.ts`, `sanity/actions/reviewActions.tsx`, `sanity.config.ts`, `review.ts`, seed writes `approvedHash`). Studio validation now matches the runtime validator (`lib/content/rules.ts`, slugify, unique ids/prices, list maximums, affordable lemonade batch, 600-char intro). Goal badge now also awarded when a lowered target is already covered, and heals saves stuck without it (`lib/economy.ts`, `setSavingsGoal` gains optional `now`). `parseProgress` returns `reset` so the town tells a full reset from a partial repair. `grantMissionReward` returns `firstClear`, fixing the "Replay reward" text on a first clear. Ledger shows the wallet balance after each entry. Mission page has a skip link. Goal-mission and not-found copy no longer hardcode "bicycle"/"three". Removed the unused `sanity/env.ts`, `sanity/lib/*`, and `getSanityClient()`. `.env.example` no longer mentions draft-aware live updates. Docs: README, ARCHITECTURE (§5–§10), PRD, RULES updated to match. Tests: 64/64 pass (9 new; the goal-badge tests fail on the old code), `typecheck`, `lint`, `build` clean. Smoke-tested town, savings goal, repair notice, and mission pages in `next dev`.
 - **2026-10-22 — Fixed hidden "GROQ" label in ARCHITECTURE §4 diagram.** Docs only. The `GROQ via sanityFetch` edge label was covered by the `demo.ts` node. Moved `DEMO` before `RES` and drew the fallback edge as `DEMO <-- ... --- RES`, so the label now renders fully. Checked by rendering the diagram with mermaid-cli. No code changed.
 - **2026-10-22 — Added PRD.md.** Docs only. Covers problem, goals and non-goals, personas, user stories, functional requirements (FR-x, marked Shipped or Proposed, checked against the code), NFRs, offline success metrics, risks, roadmap, and open questions. Found the `goal-getter` badge id clash (open issue above). Linked from AGENTS.md and the README project map. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean.
 - **2026-10-22 — Added ARCHITECTURE.md, RULES.md, MEMORY.md.** Docs only. Checked the architecture against the code and recorded the inconsistencies in ARCHITECTURE §10. Added a short pointer section to `AGENTS.md` below the managed block. In the README project map, listed the new docs and corrected the `sanity/lib/` description. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean. No code changed.

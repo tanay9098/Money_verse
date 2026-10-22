@@ -19,7 +19,7 @@ import {
 import { grantMissionReward } from "@/lib/progress";
 import type { ChoiceSession, LemonadeResult, Mission, MissionOutcome, QuizQuestion } from "@/lib/types";
 
-type RewardView = { coinsAwarded: number; xpAwarded: number; badgeEarned: boolean; badgeName: string };
+type RewardView = { firstClear: boolean; coinsAwarded: number; xpAwarded: number; badgeEarned: boolean; badgeName: string };
 
 export function MissionExperience({ mission }: { mission: Mission }) {
   const { ready, progress, save } = useProgress();
@@ -54,6 +54,7 @@ export function MissionExperience({ mission }: { mission: Mission }) {
     });
     save(granted.progress);
     setReward({
+      firstClear: granted.firstClear,
       coinsAwarded: granted.coinsAwarded,
       xpAwarded: granted.xpAwarded,
       badgeEarned: granted.badgeEarned,
@@ -63,83 +64,91 @@ export function MissionExperience({ mission }: { mission: Mission }) {
   }
 
   return (
-    <main id="main" className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/" className="inline-flex min-h-11 items-center gap-2 font-extrabold">
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          Town
-        </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {ready && progress ? <CoinPill amount={progress.coins} /> : null}
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-paper focus:px-4 focus:py-2"
+      >
+        Skip to content
+      </a>
+      <main id="main" className="mx-auto w-full max-w-3xl px-4 py-4 pb-28">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="inline-flex min-h-11 items-center gap-2 font-extrabold">
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            Town
+          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {ready && progress ? <CoinPill amount={progress.coins} /> : null}
+          </div>
         </div>
-      </div>
 
-      {phase === "intro" ? (
-        <section className="panel p-5 sm:p-7">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-extrabold uppercase tracking-wide text-leaf">{mission.topic}</p>
-              <h1 className="mt-1 text-4xl font-semibold">{mission.title}</h1>
+        {phase === "intro" ? (
+          <section className="panel p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-extrabold uppercase tracking-wide text-leaf">{mission.topic}</p>
+                <h1 className="mt-1 text-4xl font-semibold">{mission.title}</h1>
+              </div>
+              <Pip mood="wave" />
             </div>
-            <Pip mood="wave" />
-          </div>
-          <p className="text-lg leading-relaxed">{mission.story}</p>
-          <p className="mt-4 rounded-2xl bg-[#fff1c9] px-4 py-3 font-bold">Practice goal: {mission.learningGoal}</p>
-          <p className="mt-3 text-ink-soft">
-            This mission starts with {formatCoins(mission.startingCoins)} in a practice purse. Those coins stay inside the mission.
-            Your town wallet changes only when you collect a reward. All coins are fictional.
-          </p>
-          <Action className="mt-5 w-full sm:w-auto" onClick={() => setPhase("play")}>
-            Start mission
-          </Action>
-        </section>
-      ) : null}
-
-      {phase === "play" && mission.engine === "choices" ? (
-        <ChoicePlay key={playId} mission={mission} onComplete={(session) => finishPlay(outcomeFromChoices(mission, session), session.history)} />
-      ) : null}
-
-      {phase === "play" && mission.engine === "lemonade" ? (
-        <LemonadePlay key={playId} mission={mission} onComplete={(result) => finishPlay(outcomeFromLemonade(mission, result))} />
-      ) : null}
-
-      {phase === "results" && outcome ? (
-        <Results
-          mission={mission}
-          outcome={outcome}
-          recap={recap}
-          onQuiz={() => setPhase("quiz")}
-          onReplay={replay}
-        />
-      ) : null}
-
-      {phase === "quiz" ? (
-        <Quiz questions={mission.quiz} onDone={collect} disabled={!ready || !progress} />
-      ) : null}
-
-      {phase === "done" && outcome && reward ? (
-        <section className="panel pop-in p-5 sm:p-7">
-          <Pip mood="cheer" />
-          <h1 className="text-4xl font-semibold">Nice work checking the idea.</h1>
-          <div className="mt-3">
-            <StarRow stars={outcome.stars} />
-          </div>
-          <p className="mt-4 text-lg">
-            {reward.badgeEarned
-              ? `You earned the ${reward.badgeName} badge, ${formatCoins(reward.coinsAwarded)}, and ${reward.xpAwarded} XP.`
-              : `Replay reward: ${reward.xpAwarded} XP. Town-wallet coins stay as they are so rewards are not collected twice.`}
-          </p>
-          <p className="mt-2 text-ink-soft">Practice coins from the mission were not mixed into the town wallet except for this reward.</p>
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <Action href="/">Back to town</Action>
-            <Action variant="secondary" onClick={replay}>
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Replay mission
+            <p className="text-lg leading-relaxed">{mission.story}</p>
+            <p className="mt-4 rounded-2xl bg-[#fff1c9] px-4 py-3 font-bold">Practice goal: {mission.learningGoal}</p>
+            <p className="mt-3 text-ink-soft">
+              This mission starts with {formatCoins(mission.startingCoins)} in a practice purse. Those coins stay inside the mission.
+              Your town wallet changes only when you collect a reward. All coins are fictional.
+            </p>
+            <Action className="mt-5 w-full sm:w-auto" onClick={() => setPhase("play")}>
+              Start mission
             </Action>
-          </div>
-        </section>
-      ) : null}
-    </main>
+          </section>
+        ) : null}
+
+        {phase === "play" && mission.engine === "choices" ? (
+          <ChoicePlay key={playId} mission={mission} onComplete={(session) => finishPlay(outcomeFromChoices(mission, session), session.history)} />
+        ) : null}
+
+        {phase === "play" && mission.engine === "lemonade" ? (
+          <LemonadePlay key={playId} mission={mission} onComplete={(result) => finishPlay(outcomeFromLemonade(mission, result))} />
+        ) : null}
+
+        {phase === "results" && outcome ? (
+          <Results
+            mission={mission}
+            outcome={outcome}
+            recap={recap}
+            onQuiz={() => setPhase("quiz")}
+            onReplay={replay}
+          />
+        ) : null}
+
+        {phase === "quiz" ? (
+          <Quiz questions={mission.quiz} onDone={collect} disabled={!ready || !progress} />
+        ) : null}
+
+        {phase === "done" && outcome && reward ? (
+          <section className="panel pop-in p-5 sm:p-7">
+            <Pip mood="cheer" />
+            <h1 className="text-4xl font-semibold">Nice work checking the idea.</h1>
+            <div className="mt-3">
+              <StarRow stars={outcome.stars} />
+            </div>
+            <p className="mt-4 text-lg">
+              {reward.firstClear
+                ? `You earned ${reward.badgeEarned ? `the ${reward.badgeName} badge, ` : ""}${formatCoins(reward.coinsAwarded)}, and ${reward.xpAwarded} XP.`
+                : `Replay reward: ${reward.xpAwarded} XP. Town-wallet coins stay as they are so rewards are not collected twice.`}
+            </p>
+            <p className="mt-2 text-ink-soft">Practice coins from the mission were not mixed into the town wallet except for this reward.</p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Action href="/">Back to town</Action>
+              <Action variant="secondary" onClick={replay}>
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Replay mission
+              </Action>
+            </div>
+          </section>
+        ) : null}
+      </main>
+    </>
   );
 }
 
@@ -183,7 +192,7 @@ function ChoicePlay({ mission, onComplete }: { mission: Mission; onComplete: (se
       </div>
       {goal != null ? (
         <div className="mt-4">
-          <ProgressBar percent={Math.min(100, Math.round((session.balance / goal) * 100))} label={`Bicycle goal ${formatCoins(goal)}`} />
+          <ProgressBar percent={Math.min(100, Math.round((session.balance / goal) * 100))} label={`Savings goal ${formatCoins(goal)}`} />
         </div>
       ) : null}
       <h1 className="mt-4 text-3xl font-semibold">{step.title}</h1>

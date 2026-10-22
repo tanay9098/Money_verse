@@ -68,14 +68,17 @@ export function SavingsControls({ progress, onChange }: { progress: PlayerProgre
 
   function saveGoal() {
     const target = /^\d{1,7}$/.test(goalTarget.trim()) ? Number(goalTarget.trim()) : NaN;
-    const result = setSavingsGoal(progress, goalName, target);
+    const result = setSavingsGoal(progress, goalName, target, new Date().toISOString());
     if (!result.ok) {
       setNote(FAILURE_COPY[result.reason]);
       return;
     }
     onChange(result.progress);
     setEditingGoal(false);
-    setNote(`New goal: ${result.progress.savingsGoalName}, ${formatCoins(target)}.`);
+    const badgeEarned = result.progress.badges.length > progress.badges.length;
+    setNote(
+      `New goal: ${result.progress.savingsGoalName}, ${formatCoins(target)}.${badgeEarned ? " Your savings already reach it, so you earned the Goal Getter badge." : ""}`,
+    );
   }
 
   return (

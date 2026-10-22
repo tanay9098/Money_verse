@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createClient, type IdentifiedSanityDocumentStub } from "@sanity/client";
 import { demoMissions } from "../lib/content/demo";
 import { starterLessons } from "../lib/content/lessons";
+import { reviewContentHash } from "../lib/review-hash";
 import type { Lesson, Mission } from "../lib/types";
 
 // tsx does not read .env files the way Next.js does, so read them here (works on any Node version).
@@ -131,7 +132,11 @@ function lessonDocument(lesson: Lesson) {
 }
 
 async function main() {
-  const documents = [...demoMissions.map(missionDocument), ...starterLessons.map(lessonDocument)];
+  // Seeded documents count as reviewed. The fingerprint lets Studio notice a later edit and ask for a new review.
+  const documents = [...demoMissions.map(missionDocument), ...starterLessons.map(lessonDocument)].map((document) => ({
+    ...document,
+    approvedHash: reviewContentHash(document),
+  }));
   // Writing to a dataset is outward-facing, so the script only previews unless told to proceed.
   if (!process.argv.includes("--yes")) {
     console.log(`Dry run. Would create or replace ${documents.length} published documents (approved, ready for the town):`);

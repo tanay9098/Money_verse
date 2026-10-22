@@ -7,7 +7,7 @@ import { Pip, TownScene } from "@/components/town";
 import { useProgress } from "@/components/game/progress-provider";
 import { Action, CoinPill, ProgressBar, StarRow } from "@/components/game/ui";
 import { SAVINGS_GOAL_NAME, SAVINGS_GOAL_TARGET } from "@/lib/progress";
-import { formatCoins, formatSignedCoins } from "@/lib/format";
+import { difficultyLabel, formatCoins, formatSignedCoins } from "@/lib/format";
 import { levelForXp } from "@/lib/mission-engine";
 import { SavingsControls } from "@/components/game/savings-controls";
 import { LessonCard } from "@/components/game/lesson-card";
@@ -58,7 +58,7 @@ function MissionScroller({ children }: { children: React.ReactNode }) {
 }
 
 export function Dashboard({ content }: { content: ContentBundle }) {
-  const { ready, recovered, progress, save, reset } = useProgress();
+  const { ready, recovered, wasReset, progress, save, reset } = useProgress();
   const [confirmReset, setConfirmReset] = useState(false);
   const nextMission =
     content.missions.find((mission) => (progress?.missions[mission.slug]?.completions ?? 0) === 0) ?? content.missions[0];
@@ -111,7 +111,9 @@ export function Dashboard({ content }: { content: ContentBundle }) {
         <SourceNote content={content} />
         {recovered ? (
           <p className="rounded-3xl border-2 border-line bg-paper px-4 py-3 text-sm font-bold" role="status">
-            The saved game on this device could not be read, so a fresh town wallet was started. It holds fictional game coins only.
+            {wasReset
+              ? "The saved game on this device could not be read, so a fresh town wallet was started. It holds fictional game coins only."
+              : "A few saved notes on this device could not be read, so they were removed. Your game coins and savings are still here."}
           </p>
         ) : null}
 
@@ -139,6 +141,7 @@ export function Dashboard({ content }: { content: ContentBundle }) {
               <h3 className="text-2xl font-semibold">No approved missions yet</h3>
               <p className="mt-2 text-ink-soft">
                 Studio needs a mission with review status approved, then published. Drafts and items still in review stay off the town screen.
+                See the content guide in the README.
               </p>
             </div>
           ) : (
@@ -229,7 +232,7 @@ function MissionCard({ mission, stars, completions }: { mission: Mission; stars:
       <h3 className="text-2xl font-semibold">{mission.title}</h3>
       <p className="mt-2 flex-1 text-ink-soft">{mission.summary}</p>
       <p className="mt-3 text-sm font-extrabold uppercase tracking-wide text-ink-soft">
-        {mission.difficulty} · ages {mission.ageMin}–{mission.ageMax}
+        {difficultyLabel(mission.difficulty)} · ages {mission.ageMin}–{mission.ageMax}
       </p>
       <Action href={`/missions/${mission.slug}`} className="mt-4 w-full">
         {completions > 0 ? "Replay" : "Start"}
@@ -259,7 +262,7 @@ function WalletPanel({
   goalTarget: number;
   totalEarned: number;
   badges: { id: string; name: string; description: string }[];
-  ledger: { id: string; label: string; amount: number }[];
+  ledger: { id: string; label: string; amount: number; balanceAfter: number }[];
   controls: React.ReactNode;
   onResetRequest: () => void;
 }) {
@@ -303,7 +306,10 @@ function WalletPanel({
                 {ledger.slice(-5).reverse().map((entry) => (
                   <li key={entry.id} className="flex items-center justify-between gap-3 py-2 text-sm font-bold">
                     <span>{entry.label}</span>
-                    <span>{formatSignedCoins(entry.amount)}</span>
+                    <span className="text-right">
+                      {formatSignedCoins(entry.amount)}
+                      <span className="block text-xs text-ink-soft">Wallet after: {formatCoins(entry.balanceAfter)}</span>
+                    </span>
                   </li>
                 ))}
               </ul>

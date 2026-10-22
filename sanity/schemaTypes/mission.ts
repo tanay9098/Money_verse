@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { CoinField } from "@/sanity/components/CoinField";
+import { slugFormat, slugify, uniqueBy } from "@/lib/content/rules";
 import { reviewFields } from "@/sanity/schemaTypes/review";
 
 export const mission = defineType({
@@ -13,8 +14,8 @@ export const mission = defineType({
       name: "slug",
       title: "Slug",
       type: "slug",
-      options: { source: "title", maxLength: 80 },
-      validation: (rule) => rule.required(),
+      options: { source: "title", maxLength: 80, slugify },
+      validation: (rule) => rule.required().custom(slugFormat),
     }),
     defineField({ name: "summary", title: "Card summary", type: "text", rows: 2, validation: (rule) => rule.required().max(240) }),
     defineField({ name: "story", title: "Intro story", type: "text", rows: 5, validation: (rule) => rule.required().max(900) }),
@@ -118,6 +119,7 @@ export const mission = defineType({
       type: "array",
       of: [{ type: "missionStep" }],
       hidden: ({ parent }) => parent?.engine !== "choices",
+      validation: (rule) => rule.max(8).custom(uniqueBy("id", "step id")),
     }),
     defineField({
       name: "supplies",
@@ -125,6 +127,7 @@ export const mission = defineType({
       type: "array",
       of: [{ type: "supplyOption" }],
       hidden: ({ parent }) => parent?.engine !== "lemonade",
+      validation: (rule) => rule.max(6).custom(uniqueBy("id", "supply id")),
     }),
     defineField({
       name: "prices",
@@ -132,6 +135,7 @@ export const mission = defineType({
       type: "array",
       of: [{ type: "priceOption" }],
       hidden: ({ parent }) => parent?.engine !== "lemonade",
+      validation: (rule) => rule.max(6).custom(uniqueBy("price", "price")),
     }),
     defineField({
       name: "lemonadeIntro",
@@ -139,13 +143,14 @@ export const mission = defineType({
       type: "text",
       rows: 3,
       hidden: ({ parent }) => parent?.engine !== "lemonade",
+      validation: (rule) => rule.max(600),
     }),
     defineField({
       name: "quiz",
       title: "Knowledge check",
       type: "array",
       of: [{ type: "quizQuestion" }],
-      validation: (rule) => rule.required().min(1).max(6),
+      validation: (rule) => rule.required().min(1).max(6).custom(uniqueBy("id", "question id")),
     }),
     defineField({ name: "rewards", title: "Reward", type: "reward", validation: (rule) => rule.required() }),
   ],
@@ -157,7 +162,8 @@ export const mission = defineType({
         ageMax?: number;
         engine?: string;
         steps?: unknown[];
-        supplies?: unknown[];
+        startingCoins?: number;
+        supplies?: { cost?: number }[];
         prices?: unknown[];
         lemonadeIntro?: string;
       };
@@ -169,6 +175,10 @@ export const mission = defineType({
       }
       if (value.engine === "lemonade") {
         if (!Array.isArray(value.supplies) || value.supplies.length < 1) return "Add at least one supply batch.";
+        const purse = value.startingCoins ?? 0;
+        if (!value.supplies.some((supply) => typeof supply?.cost === "number" && supply.cost <= purse)) {
+          return "At least one supply batch must cost no more than the starting mission coins.";
+        }
         if (!Array.isArray(value.prices) || value.prices.length < 1) return "Add at least one price.";
         if (!value.lemonadeIntro) return "Add stand instructions.";
       }

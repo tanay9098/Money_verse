@@ -133,35 +133,45 @@ function parseLedger(value: unknown): LedgerEntry | null {
   };
 }
 
-export function parseProgress(raw: unknown): { progress: PlayerProgress; recovered: boolean } {
+/**
+ * `recovered` is true when anything in the save had to change. `reset` is true only when
+ * the whole save was replaced by a fresh wallet; otherwise just the broken rows were dropped.
+ */
+export type ParsedProgress = { progress: PlayerProgress; recovered: boolean; reset: boolean };
+
+function freshAfterBadSave(): ParsedProgress {
+  return { progress: createFreshProgress(), recovered: true, reset: true };
+}
+
+export function parseProgress(raw: unknown): ParsedProgress {
   if (!isRecord(raw) || raw.version !== PROGRESS_VERSION) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!Number.isInteger(raw.coins) || (raw.coins as number) < 0) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!Number.isInteger(raw.xp) || (raw.xp as number) < 0) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!Number.isInteger(raw.savings) || (raw.savings as number) < 0) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!Number.isInteger(raw.savingsGoalTarget) || (raw.savingsGoalTarget as number) <= 0) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!isNonEmptyString(raw.savingsGoalName)) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (!Array.isArray(raw.badges) || !Array.isArray(raw.ledger) || !isRecord(raw.missions)) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   if (raw.badges.length > MAX_BADGES || raw.ledger.length > 200 || Object.keys(raw.missions).length > 40) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
 
   const rawLessons = isRecord(raw.lessons) ? raw.lessons : {};
   if (Object.keys(rawLessons).length > MAX_LESSONS) {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
   const badges = raw.badges.map(parseBadge).filter((badge): badge is Badge => badge !== null);
   const ledger = raw.ledger.map(parseLedger).filter((entry): entry is LedgerEntry => entry !== null);
@@ -179,6 +189,7 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
     if (record) lessons[key] = record;
   }
 
+  // totalEarned is never read from the save. It is recalculated so the money invariant holds by construction.
   // Saves made before totals existed have no spending, so everything held was earned.
   const totalSpent = Number.isInteger(raw.totalSpent) && (raw.totalSpent as number) >= 0 ? (raw.totalSpent as number) : 0;
   const totalEarned = (raw.coins as number) + (raw.savings as number) + totalSpent;
@@ -191,6 +202,7 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
 
   return {
     recovered: dropped,
+    reset: false,
     progress: {
       version: PROGRESS_VERSION,
       coins: raw.coins as number,
@@ -208,12 +220,12 @@ export function parseProgress(raw: unknown): { progress: PlayerProgress; recover
   };
 }
 
-export function readStoredProgress(raw: string | null): { progress: PlayerProgress; recovered: boolean } {
-  if (!raw) return { progress: createFreshProgress(), recovered: false };
+export function readStoredProgress(raw: string | null): ParsedProgress {
+  if (!raw) return { progress: createFreshProgress(), recovered: false, reset: false };
   try {
     return parseProgress(JSON.parse(raw) as unknown);
   } catch {
-    return { progress: createFreshProgress(), recovered: true };
+    return freshAfterBadSave();
   }
 }
 
@@ -243,7 +255,7 @@ export function grantMissionReward(
     quizCorrect: number;
     now: string;
   },
-): { progress: PlayerProgress; coinsAwarded: number; xpAwarded: number; badgeEarned: boolean } {
+): { progress: PlayerProgress; firstClear: boolean; coinsAwarded: number; xpAwarded: number; badgeEarned: boolean } {
   const previous = progress.missions[input.slug];
   const firstClear = !previous || previous.completions === 0;
   const quizXp = Math.max(0, input.quizCorrect) * 5;
@@ -289,7 +301,7 @@ export function grantMissionReward(
     },
   };
 
-  return { progress: next, coinsAwarded, xpAwarded, badgeEarned };
+  return { progress: next, firstClear, coinsAwarded, xpAwarded, badgeEarned };
 }
 
 export function lessonPassMark(lesson: Pick<Lesson, "quiz" | "passPercent">): number {
