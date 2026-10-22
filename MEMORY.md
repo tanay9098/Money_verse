@@ -33,13 +33,14 @@ A short context file for the next person or AI tool. Read this first, then [RULE
 - Unused scaffold: `sanity/env.ts` and `sanity/lib/*`. It has a mismatched API version default, throws when env is missing, and uses the transitive `@sanity/image-url`. Delete it or wire it in (ARCHITECTURE §10).
 - `getSanityClient()` in `lib/sanity/client.ts` is unused.
 - `spendCoins` has no UI caller yet (kept for a future shop).
-- No PRD exists. Product intent is spread across `README.md` and `WRITEUP.md`.
+- Badge id clash: the Savings Quest mission badge and the real-savings goal badge are both `goal-getter`. If the mission is cleared first, the goal's badge and 25 XP never arrive (PRD FR-4.4, §12 Q6). Owner to decide.
 - No component or E2E tests.
 
 ## 4. Change log (newest first)
 
 Use this format: `YYYY-MM-DD — short title — files touched — tests run and results — notes`.
 
+- **2026-10-22 — Added PRD.md.** Docs only. Covers problem, goals and non-goals, personas, user stories, functional requirements (FR-x, marked Shipped or Proposed, checked against the code), NFRs, offline success metrics, risks, roadmap, and open questions. Found the `goal-getter` badge id clash (open issue above). Linked from AGENTS.md and the README project map. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean.
 - **2026-10-22 — Added ARCHITECTURE.md, RULES.md, MEMORY.md.** Docs only. Checked the architecture against the code and recorded the inconsistencies in ARCHITECTURE §10. Added a short pointer section to `AGENTS.md` below the managed block. In the README project map, listed the new docs and corrected the `sanity/lib/` description. Tests: `npm run test` 55/55 pass, `typecheck` clean, `lint` clean. No code changed.
 - **Earlier history:**
   - PR #15 removed the "For grownups nearby" section.

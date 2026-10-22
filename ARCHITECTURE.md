@@ -1,6 +1,6 @@
 # MoneyVerse architecture
 
-How the app is built, where data lives, and how a request moves through the code. Product rules (economy, rewards, game design) are in [README.md](README.md). Working rules for contributors and AI tools are in [RULES.md](RULES.md). Current status and change log are in [MEMORY.md](MEMORY.md).
+How the app is built, where data lives, and how a request moves through the code. Product rules (economy, rewards, game design) are in [README.md](README.md). Working rules for contributors and AI tools are in [RULES.md](RULES.md). Current status and change log are in [MEMORY.md](MEMORY.md). Product goals and requirements are in [PRD.md](PRD.md).
 
 Last checked against the code: 2026-10-22 (commit `5463c5f`).
 
@@ -95,6 +95,7 @@ Money_verse/
 ├── vitest.config.ts / eslint.config.mjs / postcss.config.mjs / tsconfig.json
 ├── .env.example                        # All supported env vars, documented
 ├── README.md                           # Product, setup, content model, economy rules
+├── PRD.md                              # Product requirements
 ├── ARCHITECTURE.md                     # This file
 ├── RULES.md                            # Non-negotiable working rules
 ├── MEMORY.md                           # Status + change log for the next person or AI tool

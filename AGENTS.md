@@ -15,3 +15,4 @@ Read these before changing code:
 1. [MEMORY.md](MEMORY.md): current state, open issues, and change log. Update it after every change.
 2. [RULES.md](RULES.md): no unnecessary dependencies, don't break existing APIs or contracts, test after every change.
 3. [ARCHITECTURE.md](ARCHITECTURE.md): tech stack, folder structure, data stores, and request/data flows.
+4. [PRD.md](PRD.md): product goals, target users, and functional and non-functional requirements.
