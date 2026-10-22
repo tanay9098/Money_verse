@@ -172,15 +172,6 @@ export function Dashboard({ content }: { content: ContentBundle }) {
             ))}
           </div>
         </section>
-
-        <section className="panel px-5 py-5 text-sm leading-relaxed text-ink-soft">
-          <h2 className="display text-xl font-semibold text-ink">For grownups nearby</h2>
-          <p className="mt-2">
-            MoneyVerse is a practice game. It does not offer personal financial advice, and every coin is a fictional game coin. Without
-            signing in, progress stays in this browser. Google sign-in is optional and is used only to store that same progress in a
-            private cloud save. Signing in does not move a signed-out game onto the account.
-          </p>
-        </section>
       </main>
       {confirmReset ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center" role="presentation">
