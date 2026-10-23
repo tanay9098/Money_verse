@@ -70,10 +70,10 @@ A short, friendly game in which a child helps **Pip, a piggy-bank guide**, make 
 | FR-1.2 | Show the missions as cards in a horizontally scrollable row with arrow controls. | Each card shows title, summary, difficulty, best stars, and a play link to `/missions/<slug>`. Arrows scroll the row. Cards resize for phone widths. | Shipped |
 | FR-1.3 | Offer a "next mission" call to action. | The hero button links to the first mission the player has not yet completed, or to the first mission once all are done. | Shipped |
 | FR-1.4 | Show where the content comes from. | The label reads **Studio lessons**, **Demo lessons**, or **Lessons unavailable**, with a reason. | Shipped |
-| FR-1.5 | Show empty states. | With no approved missions or lessons, the town says so and points editors to the README content guide. | Shipped |
+| FR-1.5 | Show empty states. | With no approved missions or no approved lessons, the town says so and points editors to the README content guide. | Shipped |
 | FR-1.6 | Show recent wallet activity. | The wallet panel lists the 5 most recent ledger entries (up to 40 are stored), each with its amount and the balance after. | Shipped |
 | FR-1.7 | Reset progress with confirmation. | "Reset" opens a modal dialog. Confirming restores a fresh 20-coin wallet. Cancelling changes nothing. | Shipped |
-| FR-1.8 | Explain a recovered save. | If saved data was unreadable, the town says a fresh wallet was started. | Shipped |
+| FR-1.8 | Explain a recovered save. | If the whole save was unreadable, the town says a fresh wallet was started. If only some rows were broken and dropped, it says a few notes were removed and the coins are still there. | Shipped |
 
 ### 6.2 Missions (`/missions/[slug]`)
 
@@ -83,7 +83,7 @@ All missions use practice coins that stay inside the mission. Only the final rew
 |---|---|---|---|
 | FR-2.1 | **Needs vs Wants** (`needs-vs-wants`, choices engine, easy). The player spends a 24-coin outing budget over 3 steps. | Each choice is tagged need, want, save, or spend, and shows feedback. Unaffordable choices are disabled. 3 stars for 3+ needs met, 2 stars at the required 2 needs, otherwise 1 star. The result explains opportunity cost. | Shipped |
 | FR-2.2 | **Savings Quest** (`savings-quest`, choices engine, medium). A practice jar goes from 100 toward a 150-coin bicycle over 4 weeks of income and choices. | A week left untouched adds a flat 3-coin simple-interest bonus. 3 stars if the jar reaches the goal, 2 if within 25 coins, otherwise 1. The copy says real interest is not guaranteed and investing can lose money. | Shipped |
-| FR-2.3 | **Lemonade Stand** (`lemonade-stand`, lemonade engine, medium). The player has 30 coins, picks a supply batch (8, 16, or 26 coins) and a price. | Customer counts follow fixed rules, never random. Revenue = cups sold × price. Profit = revenue − expenses. A batch the player cannot afford stays disabled; there is no borrowing. 3 stars for profit ≥ 8, 2 for any profit, 1 for break-even or a loss. A loss is explained, not punished. | Shipped |
+| FR-2.3 | **Lemonade Stand** (`lemonade-stand`, lemonade engine, medium). The player has 30 coins, picks a supply batch (8, 16, or 26 coins; a 40-coin batch is shown but disabled) and a price. | Customer counts follow fixed rules, never random. Revenue = cups sold × price. Profit = revenue − expenses. A batch the player cannot afford stays disabled; there is no borrowing. 3 stars for profit ≥ 8, 2 for any profit, 1 for break-even or a loss. A loss is explained, not punished. | Shipped |
 | FR-2.4 | A knowledge-check quiz after each mission. | Single-choice questions, each answer with an explanation. 5 XP per correct answer. | Shipped |
 | FR-2.5 | Rewards are paid once. | First clear: mission XP + coins + badge (Need Spotter, Goal Getter, Profit Pro). Replays: 15 XP + quiz XP and may raise best stars, but pay no coins and no duplicate badge. | Shipped |
 | FR-2.6 | Unknown mission slugs show a friendly not-found page with a link back to town. | Visiting `/missions/does-not-exist` shows "That path is not on the town map." | Shipped |
@@ -104,7 +104,7 @@ All missions use practice coins that stay inside the mission. Only the final rew
 | FR-4.1 | Move coins wallet → jar with Save 5, Save 10, Save all, or a typed amount. Move them back with Take back. | Only whole numbers from 1 to 1,000,000. Decimals, negatives, `NaN`, and `1e3` are rejected with a clear message. | Shipped |
 | FR-4.2 | Balances never go negative, and failed actions change nothing. | `coins + savings + totalSpent === totalEarned` always holds. | Shipped |
 | FR-4.3 | The player can rename the savings goal and change its target (up to 1,000,000). | The target only measures progress. It never limits or changes balances. | Shipped |
-| FR-4.4 | Reaching the goal with real savings awards a badge. | The Goal Getter badge and 25 XP are granted once. **Known gap:** the Savings Quest mission badge uses the same id (`goal-getter`). A player who clears that mission first never gets this badge or its 25 XP (see §12, question 6). | Shipped |
+| FR-4.4 | Reaching the goal with real savings awards a badge. | The Goal Getter badge and 25 XP are granted once, whether the goal is reached by saving or by lowering the target to an amount already saved. **Known gap:** the Savings Quest mission badge uses the same id (`goal-getter`). A player who clears that mission first never gets this badge or its 25 XP (see §12, question 6). | Shipped |
 | FR-4.5 | XP levels. | Coin Curious (0), Saver Sprout (40), Budget Buddy (100), Market Helper (180), Town Treasurer (280), with a progress bar to the next level. | Shipped |
 | FR-4.6 | A town shop where coins can be spent on cosmetic items. | Uses the existing `spendCoins` and `"spend"` ledger kind. Nothing real is purchasable. | **Proposed** |
 
@@ -120,8 +120,8 @@ All missions use practice coins that stay inside the mission. Only the final rew
 
 | Id | Requirement | Acceptance criteria | Status |
 |---|---|---|---|
-| FR-6.1 | Editors can manage missions and lessons: text, amounts, choices, supplies, prices, quizzes, rewards, difficulty, age range (8–12), and order. | All fields validate in Studio. Coin fields use the custom game-coin input. | Shipped |
-| FR-6.2 | A review workflow. | Draft → **Send for review** → **Approve** → Publish. The desk groups In review, Approved, and Drafts. Reviewer notes are never shown to players. | Shipped |
+| FR-6.1 | Editors can manage missions and lessons: text, amounts, choices, supplies, prices, quizzes, rewards, difficulty, age range (8–12), and order. | All fields validate in Studio, with the same rules the game applies at runtime (slug/id format, unique ids, list limits, an affordable lemonade batch). Coin fields use the custom game-coin input. | Shipped |
+| FR-6.2 | A review workflow. | Draft → **Send for review** → **Approve** → Publish. Review status is read-only and changed only by the actions. Publish is disabled until approval, and an edit after approval needs a new review. The desk groups In review, Approved, and Drafts. Reviewer notes are never shown to players. | Shipped |
 | FR-6.3 | Only content that is approved **and** published reaches children. | The GROQ filter is `reviewStatus == "approved"`, read with the `published` perspective. | Shipped |
 | FR-6.4 | A mission Play preview. | The mission document has a Play preview tab listing steps, supplies, prices, and quiz questions. | Shipped |
 | FR-6.5 | Publishing updates the game without a redeploy. | With a project id set, Live Content refreshes the town after a publish. | Shipped |
@@ -136,7 +136,7 @@ All missions use practice coins that stay inside the mission. Only the final rew
 |---|---|---|---|
 | NFR-1 | **Child safety and privacy** | Collect no personal data: no birth dates, location, names, or real financial data. No ads, purchases, chat, or public leaderboards. Every amount is labelled a fictional game coin. | Shipped |
 | NFR-2 | **Content tone** | Copy is plain, short, and kind. Wants are never framed as failures, and losses are framed as practice. No real financial advice. Interest and investing disclaimers appear where relevant. | Shipped |
-| NFR-3 | **Accessibility** | A skip link to main content, semantic headings, labelled controls, a modal dialog with `aria-modal`, large touch targets (min height about 44–48px), and readable fonts. **[Proposed]** Run an audit to WCAG 2.2 AA: contrast, keyboard paths through every mission, screen-reader announcements for feedback. | Partly shipped |
+| NFR-3 | **Accessibility** | A skip link to main content on the town and mission screens, semantic headings, labelled controls, a modal dialog with `aria-modal`, large touch targets (min height about 44–48px), and readable fonts. **[Proposed]** Run an audit to WCAG 2.2 AA: contrast, keyboard paths through every mission, screen-reader announcements for feedback. | Partly shipped |
 | NFR-4 | **Responsive** | Usable from phone width (about 360px) to desktop with no horizontal page scroll. The mission row scrolls on its own. | Shipped |
 | NFR-5 | **Reliability** | The game still renders if Sanity is down: demo in dev, a clear empty state in prod. A render error shows a friendly retry page. Saved progress is never lost because of a content error. | Shipped |
 | NFR-6 | **Security** | Sanity tokens are server-only, never under `NEXT_PUBLIC_`. Studio is `noindex`. The write token is used only by the seed script. | Shipped |
@@ -177,7 +177,7 @@ The app deliberately has no analytics (NFR-1), so success is measured **offline*
 
 ## 11. Roadmap (all [Proposed], to be prioritised by the owner)
 
-1. **Clean-up:** remove or wire in the unused `sanity/env.ts` and `sanity/lib/*` scaffold (ARCHITECTURE §10).
+1. **Done (2026-10-22):** removed the unused `sanity/env.ts` and `sanity/lib/*` scaffold.
 2. **Component and E2E tests** for the dashboard, each mission, and lessons (for example Testing Library or Playwright). Each needs a dependency justified per RULES.md.
 3. **Accessibility audit** to WCAG 2.2 AA (NFR-3).
 4. **Town shop** (FR-4.6) for cosmetic items, using the existing `spendCoins`.

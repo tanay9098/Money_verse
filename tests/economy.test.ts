@@ -181,6 +181,26 @@ describe("goals", () => {
     for (const bad of [0, -1, 1.5, NaN, 1_000_001]) expect(setSavingsGoal(fresh, "Skateboard", bad).ok).toBe(false);
     expect(setSavingsGoal(fresh, "   ", 100).ok).toBe(false);
   });
+
+  it("awards the goal badge once when a lower target is already covered by savings", () => {
+    const saved = mustOk(transferToSavings(createFreshProgress(t0), 20, t1));
+    expect(saved.badges).toHaveLength(0);
+    const lowered = mustOk(setSavingsGoal(saved, "Kite", 15, t2));
+    expect(lowered.badges.map((badge) => badge.id)).toEqual(["goal-getter"]);
+    expect(lowered.xp).toBe(GOAL_BADGE_XP);
+    expect(checkInvariants(lowered)).toBeNull();
+
+    const again = mustOk(setSavingsGoal(lowered, "Kite", 10, t2));
+    expect(again.badges).toHaveLength(1);
+    expect(again.xp).toBe(GOAL_BADGE_XP);
+  });
+
+  it("gives the badge on the next save to a player whose goal was already covered without one", () => {
+    // A save from before the fix: savings already cover the goal, but no badge was given.
+    const stuck: PlayerProgress = { ...earn(createFreshProgress(t0), 10, "mission:x"), coins: 10, savings: 20, savingsGoalTarget: 15 };
+    const next = mustOk(transferToSavings(stuck, 1, t2));
+    expect(next.badges.map((badge) => badge.id)).toEqual(["goal-getter"]);
+  });
 });
 
 describe("history agrees with balances", () => {

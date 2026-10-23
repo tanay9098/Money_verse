@@ -12,7 +12,7 @@ MoneyVerse is a financial-literacy game for children ages 8–12. Players help P
 - Practice coins stay inside the mission. The town wallet changes only for rewards and for savings the player moves on purpose
 - Anonymous progress saved in the browser (`localStorage`, key `moneyverse.progress.v1`), with a confirmed reset
 - Sanity Studio for lessons, missions, choices, quizzes, rewards, and age ranges
-- Built-in demo content when Sanity is not configured, is empty, or cannot be reached. The town screen says **Demo lessons** or **Studio lessons**
+- In local development, built-in demo content when Sanity is not configured, is empty, or cannot be reached. A production server shows an empty town instead. The town screen says **Studio lessons**, **Demo lessons**, or **Lessons unavailable**
 
 ## Stack
 
@@ -29,7 +29,7 @@ npm run lint
 npm run typecheck
 npm run build
 npm run start
-npm run seed:sanity  # optional; needs a write token in .env.local
+npm run seed:sanity  # optional dry run; add `-- --yes` and a write token in .env.local to write
 ```
 
 ## Play without Sanity
@@ -60,7 +60,7 @@ NEXT_PUBLIC_SANITY_API_VERSION=2026-01-01
 6. Optional: create a robot token with **Editor** rights and set `SANITY_API_WRITE_TOKEN` only in `.env.local`, then run `npm run seed:sanity`. That writes the demo missions and lessons. The token is used only by the seed script.
 7. For a private dataset, set `SANITY_API_READ_TOKEN` in `.env.local`. Do not prefix tokens with `NEXT_PUBLIC_`.
 
-Editors can change lesson text, mission descriptions, choice explanations, prices, supply costs, quiz answers, difficulty, and age ranges in Studio. Coin fields use a custom game-coin input. Each mission has a Play preview. Documents move from draft to in review to approved with Studio actions. The town queries only published documents whose `reviewStatus` is `approved`. Live Content refreshes the town after a publish when a Sanity project id is set. In local development, invalid or empty Sanity results fall back to demo content and the screen says so. In production they do not.
+Editors can change lesson text, mission descriptions, choice explanations, prices, supply costs, quiz answers, difficulty, and age ranges in Studio. Coin fields use a custom game-coin input. Each mission has a Play preview. Documents move from draft to in review to approved with Studio actions; the review status field itself is read-only. Publish stays disabled until a document is approved, and an edit made after approval needs a new review before it can be published. The town queries only published documents whose `reviewStatus` is `approved`. Live Content refreshes the town after a publish when a Sanity project id is set. In local development, invalid or empty Sanity results fall back to demo content and the screen says so. In production they do not.
 
 `goalAmount` turns a choice mission into a savings goal. Leave it empty to score needs instead (`needsRequired`). The lemonade play style uses supply batches and prices. Customer counts are fixed rules, not random chance.
 
@@ -75,7 +75,7 @@ The Sanity schema lives in [`sanity/schemaTypes/`](sanity/schemaTypes/) and is r
 | `mission` | `mission.ts` | `title`, `slug`, `summary`, `story`, `learningGoal`, `topic`, `difficulty` (easy/medium/hard), `ageMin`/`ageMax` (8–12), `order`, `engine` (`choices` or `lemonade`), `startingCoins`, `goalAmount`, `needsRequired`, `successHeadline`, `practiceHeadline`, `steps[]`, `supplies[]`, `prices[]`, `lemonadeIntro`, `quiz[]`, `rewards` |
 | `lesson` | `lesson.ts` | `title`, `slug`, `summary`, `body`, `topic`, `difficulty`, `objectives[]`, `sections[]`, `quiz[]` (up to 5 questions), `passPercent`, `rewards`, `ageMin`/`ageMax`, `order` |
 
-**Review workflow (both documents).** `review.ts` adds `reviewStatus` (`draft`, `inReview`, `approved`) and a `reviewerNote` that players never see. The Studio actions in `sanity/actions/reviewActions.tsx` are "Send for review" and "Approve". Both queries filter on `reviewStatus == "approved"` and read the `published` perspective, so a document must be approved **and** published to appear in the game.
+**Review workflow (both documents).** `review.ts` adds a read-only `reviewStatus` (`draft`, `inReview`, `approved`), a `reviewerNote` that players never see, and a hidden `approvedHash`. The Studio actions in `sanity/actions/reviewActions.tsx` are "Send for review" and "Approve". Approve stores a fingerprint of the content (`lib/review-hash.ts`) in `approvedHash`. Studio's Publish button is disabled unless the document is approved and still matches that fingerprint, so an edit after approval shows "Send for review again". Both queries filter on `reviewStatus == "approved"` and read the `published` perspective, so a document must be approved **and** published to appear in the game. (Writes through the Sanity API, such as the seed script, bypass the Studio gate.)
 
 **Reusable objects** (`objects.ts`)
 
@@ -86,11 +86,11 @@ The Sanity schema lives in [`sanity/schemaTypes/`](sanity/schemaTypes/) and is r
 | `supplyOption` | `mission.supplies` | Lemonade supply batch: `cost`, `cups` |
 | `priceOption` | `mission.prices` | Lemonade price and its fixed `customers` count |
 | `quizQuestion` / `quizChoice` | `quiz` | Single-choice question; exactly one `correct` answer, each with an `explanation` |
-| `reward` | `mission.rewards` | `xp`, `coins`, `badgeId`, `badgeDescription` |
+| `reward` | `mission.rewards` | `xp`, `coins`, `badgeId`, `badgeName`, `badgeDescription` |
 | `lessonSection` | `lesson.sections` | Heading, text, and a picture from a fixed icon list |
 | `lessonReward` | `lesson.rewards` | One-time `coins` and `xp` |
 
-**Studio customization.** Coin fields use `sanity/components/CoinField.tsx`. Missions get a Play preview tab through `sanity/structure.ts` and `sanity/components/MissionPreview.tsx`. Play styles, scoring, and customer rules stay in TypeScript, so editors change content and numbers, not game mechanics.
+**Studio customization.** Studio validation matches the game's runtime validator, so content that passes Studio is not silently dropped: slugs and ids use only lowercase letters, numbers, and hyphens (the slug Generate button produces valid ones), ids inside a list must be unique, prices must be unique, a mission has at most 8 steps, 6 supplies, and 6 prices, stand instructions are at most 600 characters, and a lemonade mission needs at least one supply batch it can afford. The shared rules live in `lib/content/rules.ts`. Coin fields use `sanity/components/CoinField.tsx`. Missions get a Play preview tab through `sanity/structure.ts` and `sanity/components/MissionPreview.tsx`. Play styles, scoring, and customer rules stay in TypeScript, so editors change content and numbers, not game mechanics.
 
 ## Game design
 
@@ -129,7 +129,7 @@ There are no accounts. Progress is saved in this browser's `localStorage` under 
 }
 ```
 
-Missing data starts a new wallet with 20 starter game coins. Malformed numbers, the wrong version, or unreadable JSON replace the save with a fresh wallet and the town screen explains that. Broken badge rows are dropped. Saves written before `lessons` and the totals existed are still read, with those fields filled in.
+Missing data starts a new wallet with 20 starter game coins. Malformed numbers, the wrong version, or unreadable JSON replace the save with a fresh wallet, and the town screen says so. Broken badge, ledger, mission, or lesson rows are dropped while the wallet is kept, and the town screen says a few notes were removed. `totalEarned` is never read from the save; it is recalculated as wallet + savings + spent. Saves written before `lessons` and the totals existed are still read, with those fields filled in.
 
 ## Deployment
 
@@ -148,10 +148,11 @@ Missing data starts a new wallet with 20 starter game coins. Malformed numbers, 
 - `lib/finance.ts` wallet, savings, lemonade math
 - `lib/mission-engine.ts` mission rules and results
 - `lib/progress.ts` versioned save data
-- `lib/content/` demo content, lessons, validation, Sanity fallback
-- `lib/sanity/` client, live content, and GROQ
-- `sanity.config.ts` Studio configuration
-- `sanity/` schema, `structure.ts` (desk layout), `env.ts`, `actions/` (review actions), `components/` (coin input, mission preview), and `lib/` (unused `sanity init` scaffold; the game uses `lib/sanity/`, see ARCHITECTURE.md)
+- `lib/content/` demo content, lessons, validation, content rules shared with Studio, Sanity fallback
+- `lib/review-hash.ts` content fingerprint for the Studio review gate
+- `lib/sanity/` config check, live content, and GROQ
+- `sanity.config.ts` Studio configuration (adds the review actions and gates Publish)
+- `sanity/` schema, `structure.ts` (desk layout), `actions/` (review actions and Publish gate), `components/` (coin input, mission preview)
 - `scripts/seed-sanity.ts` optional content seeding
 - `tests/` unit tests
 - `PRD.md` product requirements: goals, target users, requirements
@@ -182,7 +183,7 @@ The dataset has no documents that are both approved and published (or the projec
 
 1. Open `https://<your-site>/studio` and sign in with the Sanity account.
 2. **Missions** or **Lessons** → create a document and fill the required fields. Studio shows validation messages on each field.
-3. Document actions: **Send for review** → **Approve** → **Publish**.
+3. Document actions: **Send for review** → **Approve** → **Publish**. Publish stays disabled until Approve. If you edit after approving, use **Send for review again** first.
 4. Reload the town. Lessons: sections, a quiz of up to 5 single-choice questions (exactly one answer marked correct; leave the quiz empty for a read-only lesson), a pass percentage (66 = 2 of 3), and an optional one-time coin/XP reward.
 
 Studio must be allowed to talk to the project: in sanity.io/manage → project → API → **CORS origins**, add the deployed site origin (for example `https://<your-site>`) **with credentials allowed**.
@@ -190,8 +191,8 @@ Studio must be allowed to talk to the project: in sanity.io/manage → project �
 ### Route B: load the 3 missions and 8 starter lessons
 
 ```bash
-# .env.local needs NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, SANITY_API_WRITE_TOKEN
-npm run seed:sanity            # dry run: lists the 11 documents, writes nothing
+npm run seed:sanity            # dry run: lists the 11 documents, writes nothing, needs no env vars
+# --yes needs NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, SANITY_API_WRITE_TOKEN in .env.local
 npm run seed:sanity -- --yes   # writes them as approved + published
 ```
 
@@ -206,4 +207,4 @@ All logic lives in `lib/economy.ts`; components call it and never compute balanc
 - Wallet, jar, and total earned always agree: `wallet + savings + spent = total earned`.
 - **Goal target ≠ wallet ≠ savings.** The target (default 150, editable up to 1,000,000 in the app) only measures progress. How much can be saved at once is limited by the wallet, nothing else. Example: 100 in the wallet and 20 saved toward 150 → save 100 → 120 of 150, 30 left.
 - Save 5 / Save 10 / Save all / any typed amount move wallet → jar. **Take back** moves jar → wallet.
-- Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (15 + 5 per correct quiz answer) for missions, or nothing for lessons. Reaching the goal with real savings awards the Goal Getter badge and 25 XP once.
+- Rewards: a mission pays once (first clear), a lesson pays once (first passing quiz). Replays give XP only (15 + 5 per correct quiz answer) for missions, or nothing for lessons. Reaching the goal with real savings awards the Goal Getter badge and 25 XP once. Lowering the target to an amount already saved counts too.

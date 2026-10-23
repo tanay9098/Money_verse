@@ -6,7 +6,10 @@ import type { PlayerProgress } from "@/lib/types";
 
 type ProgressApi = {
   ready: boolean;
+  /** Something in the stored save was unreadable and was repaired. */
   recovered: boolean;
+  /** The whole save was unreadable and a fresh wallet replaced it. Implies recovered. */
+  wasReset: boolean;
   progress: PlayerProgress | null;
   save: (next: PlayerProgress) => void;
   reset: () => void;
@@ -15,10 +18,11 @@ type ProgressApi = {
 type Snapshot = {
   ready: boolean;
   recovered: boolean;
+  wasReset: boolean;
   progress: PlayerProgress | null;
 };
 
-const SERVER_SNAPSHOT: Snapshot = { ready: false, recovered: false, progress: null };
+const SERVER_SNAPSHOT: Snapshot = { ready: false, recovered: false, wasReset: false, progress: null };
 
 let snapshot: Snapshot = SERVER_SNAPSHOT;
 const listeners = new Set<() => void>();
@@ -41,13 +45,13 @@ function readSnapshot(): Snapshot {
     const serialized = JSON.stringify(stored.progress);
     queueMicrotask(() => window.localStorage.setItem(STORAGE_KEY, serialized));
   }
-  snapshot = { ready: true, recovered: stored.recovered, progress: stored.progress };
+  snapshot = { ready: true, recovered: stored.recovered, wasReset: stored.reset, progress: stored.progress };
   return snapshot;
 }
 
-function commit(progress: PlayerProgress, recovered: boolean) {
+function commit(progress: PlayerProgress, recovered: boolean, wasReset: boolean) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  publish({ ready: true, recovered, progress });
+  publish({ ready: true, recovered, wasReset, progress });
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null);
@@ -59,9 +63,10 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ready: state.ready,
       recovered: state.recovered,
+      wasReset: state.wasReset,
       progress: state.progress,
-      save: (next) => commit(next, state.recovered),
-      reset: () => commit(createFreshProgress(), false),
+      save: (next) => commit(next, state.recovered, state.wasReset),
+      reset: () => commit(createFreshProgress(), false, false),
     }),
     [state],
   );

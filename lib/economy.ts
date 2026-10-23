@@ -94,7 +94,7 @@ export function transferToSavings(progress: PlayerProgress, amount: number, now:
     amount: -amount,
     kind: "savings-transfer",
   });
-  return { ok: true, progress: awardGoalBadge(progress, withNote, now) };
+  return { ok: true, progress: awardGoalBadge(withNote, now) };
 }
 
 export function withdrawFromSavings(progress: PlayerProgress, amount: number, now: string): EconomyResult {
@@ -122,20 +122,26 @@ export function spendCoins(progress: PlayerProgress, amount: number, label: stri
 
 /**
  * Changes the goal name and target. Savings stay where they are, so a bigger
- * target leaves more to save and a smaller one may finish the goal.
+ * target leaves more to save and a smaller one may finish the goal (and award its badge).
  */
-export function setSavingsGoal(progress: PlayerProgress, name: string, target: number): EconomyResult {
+export function setSavingsGoal(
+  progress: PlayerProgress,
+  name: string,
+  target: number,
+  now = new Date().toISOString(),
+): EconomyResult {
   const trimmed = name.trim();
   if (trimmed.length === 0 || trimmed.length > 60) return fail(progress, "invalid_goal");
   if (!Number.isSafeInteger(target) || target < 1 || target > MAX_GOAL_TARGET) return fail(progress, "invalid_goal");
-  return { ok: true, progress: { ...progress, savingsGoalName: trimmed, savingsGoalTarget: target } };
+  return { ok: true, progress: awardGoalBadge({ ...progress, savingsGoalName: trimmed, savingsGoalTarget: target }, now) };
 }
 
-/** First time actual savings reach the goal: one badge and a one-time XP bump. */
-function awardGoalBadge(before: PlayerProgress, after: PlayerProgress, now: string): PlayerProgress {
-  const wasComplete = savingsProgress(before.savings, before.savingsGoalTarget).complete;
-  const isComplete = savingsProgress(after.savings, after.savingsGoalTarget).complete;
-  if (wasComplete || !isComplete) return after;
+/**
+ * Real savings cover the goal: one badge and a one-time XP bump. It checks the
+ * current state rather than a crossing, so a goal finished by lowering the target counts too.
+ */
+function awardGoalBadge(after: PlayerProgress, now: string): PlayerProgress {
+  if (!savingsProgress(after.savings, after.savingsGoalTarget).complete) return after;
   if (after.badges.some((badge) => badge.id === "goal-getter")) return after;
   const badge: Badge = {
     id: "goal-getter",

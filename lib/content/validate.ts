@@ -1,6 +1,7 @@
+import { ID_PATTERN } from "@/lib/content/rules";
 import { CHOICE_TAGS, DIFFICULTIES, ENGINES, LESSON_ILLUSTRATIONS, type Lesson, type Mission } from "@/lib/types";
 
-const SLUG = /^[a-z0-9-]{1,80}$/;
+const SLUG = ID_PATTERN;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

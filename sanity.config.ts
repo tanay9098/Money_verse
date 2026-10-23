@@ -1,6 +1,6 @@
 import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
-import { ApproveAction, SendForReviewAction } from "@/sanity/actions/reviewActions";
+import { ApproveAction, SendForReviewAction, withReviewGate } from "@/sanity/actions/reviewActions";
 import { schemaTypes } from "@/sanity/schemaTypes";
 import { defaultDocumentNode, structure } from "@/sanity/structure";
 
@@ -22,7 +22,8 @@ export default defineConfig({
   document: {
     actions: (previous, context) => {
       if (context.schemaType !== "mission" && context.schemaType !== "lesson") return previous;
-      return [SendForReviewAction, ApproveAction, ...previous];
+      const gated = previous.map((action) => (action.action === "publish" ? withReviewGate(action) : action));
+      return [SendForReviewAction, ApproveAction, ...gated];
     },
   },
   schema: {

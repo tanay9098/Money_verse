@@ -1,4 +1,5 @@
 import { defineField, defineType } from "sanity";
+import { slugFormat, slugify, uniqueBy } from "@/lib/content/rules";
 import { reviewFields } from "@/sanity/schemaTypes/review";
 
 export const lesson = defineType({
@@ -12,8 +13,8 @@ export const lesson = defineType({
       name: "slug",
       title: "Slug",
       type: "slug",
-      options: { source: "title", maxLength: 80 },
-      validation: (rule) => rule.required(),
+      options: { source: "title", maxLength: 80, slugify },
+      validation: (rule) => rule.required().custom(slugFormat),
     }),
     defineField({ name: "summary", title: "Summary", type: "text", rows: 2, validation: (rule) => rule.required().max(240) }),
     defineField({
@@ -53,7 +54,7 @@ export const lesson = defineType({
       type: "array",
       of: [{ type: "lessonSection" }],
       description: "Shown in this order. Up to 6.",
-      validation: (rule) => rule.max(6),
+      validation: (rule) => rule.max(6).custom(uniqueBy("id", "section id")),
     }),
     defineField({
       name: "quiz",
@@ -61,7 +62,7 @@ export const lesson = defineType({
       type: "array",
       of: [{ type: "quizQuestion" }],
       description: "Single-choice questions, up to 5. Each needs 2–4 answers with exactly one marked correct. Leave empty for a read-only lesson.",
-      validation: (rule) => rule.max(5),
+      validation: (rule) => rule.max(5).custom(uniqueBy("id", "question id")),
     }),
     defineField({
       name: "passPercent",

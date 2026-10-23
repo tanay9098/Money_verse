@@ -147,8 +147,8 @@ export function outcomeFromChoices(mission: Mission, session: ChoiceSession): Mi
       succeeded: rated.succeeded,
       headline: rated.succeeded ? mission.successHeadline : mission.practiceHeadline,
       lesson: rated.succeeded
-        ? `The bicycle costs ${mission.goalAmount} game coins and the practice jar finished with ${session.balance}. Simple interest added ${interest} game coins because some weeks the jar was left untouched. In real life, interest is not guaranteed, and investing can lose money. This game uses pretend coins only.`
-        : `The bicycle still needs ${remaining} more game coins. Spending changed the plan, and that is useful to see. Saving more weeks, or choosing smaller costs, brings the jar to ${mission.goalAmount}. You can replay and try another plan. Nothing here is real money.`,
+        ? `The goal was ${mission.goalAmount} game coins and the practice jar finished with ${session.balance}. Simple interest added ${interest} game coins because some weeks the jar was left untouched. In real life, interest is not guaranteed, and investing can lose money. This game uses pretend coins only.`
+        : `The goal still needs ${remaining} more game coins. Spending changed the plan, and that is useful to see. Saving more weeks, or choosing smaller costs, brings the jar to ${mission.goalAmount}. You can replay and try another plan. Nothing here is real money.`,
       stats: [
         { label: "Practice jar start", value: `${mission.startingCoins}` },
         { label: "Income", value: `+${income}` },

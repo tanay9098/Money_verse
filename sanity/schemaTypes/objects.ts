@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { CoinField } from "@/sanity/components/CoinField";
+import { ID_PATTERN, uniqueBy } from "@/lib/content/rules";
 
 const slugId = (name: string, title: string) =>
   defineField({
@@ -7,7 +8,7 @@ const slugId = (name: string, title: string) =>
     title,
     type: "string",
     description: "Lowercase letters, numbers, and hyphens. Players never see this id.",
-    validation: (rule) => rule.required().regex(/^[a-z0-9-]{1,80}$/, { name: "id" }),
+    validation: (rule) => rule.required().regex(ID_PATTERN, { name: "id" }),
   });
 
 export const choiceOption = defineType({
@@ -113,7 +114,7 @@ export const missionStep = defineType({
       title: "Choices",
       type: "array",
       of: [{ type: "choiceOption" }],
-      validation: (rule) => rule.required().min(2).max(4),
+      validation: (rule) => rule.required().min(2).max(4).custom(uniqueBy("id", "choice id")),
     }),
   ],
   preview: {
@@ -221,6 +222,8 @@ export const quizQuestion = defineType({
       validation: (rule) =>
         rule.required().min(2).max(4).custom((choices) => {
           if (!Array.isArray(choices)) return true;
+          const unique = uniqueBy("id", "answer id")(choices);
+          if (unique !== true) return unique;
           const correct = choices.filter((choice) => (choice as { correct?: boolean }).correct).length;
           return correct === 1 ? true : "Mark exactly one correct answer.";
         }),
@@ -256,7 +259,7 @@ export const reward = defineType({
       name: "badgeId",
       title: "Badge id",
       type: "string",
-      validation: (rule) => rule.required().regex(/^[a-z0-9-]{1,80}$/, { name: "id" }),
+      validation: (rule) => rule.required().regex(ID_PATTERN, { name: "id" }),
     }),
     defineField({ name: "badgeName", title: "Badge name", type: "string", validation: (rule) => rule.required().max(80) }),
     defineField({
